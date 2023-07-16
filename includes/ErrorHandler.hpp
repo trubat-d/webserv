@@ -12,7 +12,7 @@ public:
 	public:
 		virtual const char* what() const throw()
 		{
-			return ("SocketException: cannot create socket");
+			return ("SocketException: socket failed");
 		}
 	};
 
@@ -34,6 +34,50 @@ public:
 		}
 	};
 
+	class FcntlException: public std::exception
+	{
+	public:
+		virtual const char* what() const throw()
+		{
+			return ("FcntlException: fcntl failed");
+		}
+	};
+
+	class AcceptException: public std::exception
+	{
+	public:
+		virtual const char* what() const throw()
+		{
+			return ("AcceptException: accpet failed");
+		}
+	};
+
+	class ReadException: public std::exception
+	{
+	public:
+		virtual const char* what() const throw()
+		{
+			return ("ReadException: read failed");
+		}
+	};
+
+	class WriteException: public std::exception
+	{
+	public:
+		virtual const char* what() const throw()
+		{
+			return ("WriteException: write failed");
+		}
+	};
+
+	class TcpException: public std::exception
+	{
+	public:
+		virtual const char* what() const throw()
+		{
+			return ("TcpException: Unexpected behavior");
+		}
+	};
 };
 
 #endif

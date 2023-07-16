@@ -28,6 +28,7 @@ public:
 
 	std::vector<int>	getSocket() const;
 	int					getKqueue() const;
+	void				setKqueue();
 	int					isSocket(uintptr_t socket) const;
 
 	int run();
@@ -36,13 +37,12 @@ public:
 	int	writeSocket(struct kevent & socket);
 
 	typedef std::map<int, std::string>::iterator 	map_it;
-//	typedef std::vector<int>::iterator 				vec_it;
 
 private:
 
-	int 					_kq;
-	std::vector<int>		_socket;
-	struct sockaddr_in		_hint;
+	int 						_kq;
+	std::vector<int>			_socket;
+	struct sockaddr_in			_hint;
 	std::map<int, std::string>	_rcv;
 	std::map<int, std::string>	_snd;
 

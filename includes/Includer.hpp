@@ -13,6 +13,8 @@
 #include "Utils.hpp"
 #include "ErrorHandler.hpp"
 #include "Parser.hpp"
+#include "Socket.hpp"
+#include "Http.hpp"
 class Utils;
 class Error;
 class Parser;

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #ifndef WEB_GIT_ERRORHANDLER_HPP
 #define WEB_GIT_ERRORHANDLER_HPP
 
@@ -20,17 +19,6 @@ public:
 		~ConfigParsingException() throw() {};
 		const char * what () const throw();
 	};
-};
-
-=======
-#ifndef ERROR_HANDLER
-#define ERROR_HANDLER
-
-#include <exception>
-
-class Error {
-
-public:
 
 	class SocketException: public std::exception
 	{
@@ -104,6 +92,5 @@ public:
 		}
 	};
 };
->>>>>>> f851995d0a32b946f1f84a069868c26b441a3137
 
 #endif

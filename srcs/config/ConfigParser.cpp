@@ -21,6 +21,10 @@ int main(int ac, char ** av)
 			}
 			config_parser.tree_config(buffer);
 			config_parser.configPrinter();
+			std::string name = "example.com";
+			std::string port = "580";
+			std::string path = "/dawdawdawd";
+			config_parser.getServerConfig(name, port, path);
 			file.close();
 			if (file.fail())
 				return 1;
@@ -35,6 +39,7 @@ int main(int ac, char ** av)
 std::vector<std::string> *configOptionsGen()
 {
 	std::vector<std::string> *config_options = new std::vector<std::string>();
+//	std::string test[] = {"worker_connections", "listen"};
 	config_options->push_back("worker_connections");
 	config_options->push_back("listen");
 	config_options->push_back("server_name");
@@ -131,3 +136,130 @@ bool is_only_wp(std::string str)
 	}
 	return true;
 }
+
+t_conf_map Parser::getServerConfig(std::string const & name, std::string const & port, std::string const & path) const
+{
+	t_conf_map ret;
+	join_map(ret,this->tree->config);
+	t_node *server = getServerNode(this->tree, name, port, ret);
+	getLocationNode(server, path, ret);
+	print_config(ret);
+	return ret;
+}
+
+t_node *Parser::getServerNode(t_node *head, std::string const & name, std::string const & port, t_conf_map & ret) const
+{
+	t_node *server_node = NULL;
+	if(!head)
+		return NULL;
+	else
+	{
+		for (size_t i = 0; i < head->branches.size(); i++)
+		{
+			if(head->branches[i]->title == "server")
+			{
+				if(in_config(head->branches[i]->config, "listen", port) \
+				&& in_config(head->branches[i]->config, "server_name", name))
+				{
+					join_map(ret, head->branches[i]->config);
+					return head->branches[i];
+				}
+			}
+			else
+			{
+				server_node = getServerNode(head->branches[i], name, port, ret);
+				if(server_node)
+					join_map(ret, head->branches[i]->config);
+			}
+			if(server_node != NULL)
+				return server_node;
+		}
+	}
+	return NULL;
+}
+
+bool Parser::in_config(std::map<std::string, std::vector<std::string> > & temp,std::string key, std::string value) const
+{
+	return (std::find(temp[key].begin(), temp[key].end(), value) != temp[key].end());
+}
+
+t_node *Parser::getLocationNode(t_node *head, std::string const & path, t_conf_map & ret) const
+{
+	t_node *longest_path = NULL;
+	if(!head)
+		return head;
+	else
+	{
+		for (size_t i = 0; i < head->branches.size(); i++)
+		{
+			if(head->branches[i]->title != "location")
+				continue;
+			size_t title_size = head->branches[i]->scope.length();
+//			std::cout << path << " " << head->branches[i]->scope << std::endl;
+			if(!path.compare(0,title_size, head->branches[i]->scope))
+			{
+				if(!longest_path || title_size > longest_path->scope.length())
+				{
+					longest_path = head->branches[i];
+				}
+			}
+		}
+		if(longest_path == NULL)
+		{
+				return head;
+		}
+		else
+		{
+			std::cout << longest_path->scope <<  std::endl;
+			if(longest_path->branches.empty())
+			{
+				join_map(ret, longest_path->config);
+				return longest_path;
+			}
+			else
+			{
+				join_map(ret, longest_path->config);
+				longest_path = getLocationNode(longest_path, path, ret);
+				return longest_path;
+			}
+		}
+	}
+}
+
+void Parser::join_map(t_conf_map & map1, t_conf_map & map2) const
+{
+	for (t_conf_map::iterator it = map2.begin(); it != map2.end(); it++)
+	{
+		if(map1.find(it->first) == map1.end())
+		{
+			map1[it->first] = it->second;
+		}
+	}
+}
+
+void Parser::print_config(t_conf_map & maper) const
+{
+	std::cout << " PRINTING CONFIG "<< std::endl;
+	for(t_conf_map::iterator it = maper.begin(); it != maper.end(); it++)
+	{
+		std::cout << "key : [" << it->first;
+		std::cout << "] Values : [";
+		for (size_t i = 0 ; i < it->second.size(); i++)
+		{
+			std::cout << it->second[i] << " ";
+		}
+		std::cout << "]" << std::endl;
+	}
+	std::cout << " END OF PRINTING CONFIG "<< std::endl;
+}
+
+
+
+
+
+
+
+
+
+
+

@@ -5,20 +5,17 @@
 
 
 size_t smallest_pos(std::string buffer, std::string delimiter_list);
-std::vector<std::string> split_del(std::string buffer, std::string delimiter_list);
-std::string full_trim(std::string buffer, std::string delimiters);
 bool is_valid_delimiter(char c, std::string delimiters);
 bool is_only_wp(std::string str);
-char *concatToCharset(const char* str1, std::string str2);
 std::vector<std::string> *configLabelsGen();
 std::vector<std::string> *configOptionsGen();
 
-typedef std::pair<std::string, std::vector<std::string> > t_pair;
+typedef std::map<std::string, std::vector<std::string> > t_conf_map;
 
 typedef struct s_node
 {
 	std::vector <struct s_node *> branches;
-	std::vector<std::pair<std::string, std::vector<std::string> > *> config;
+	std::map<std::string, std::vector<std::string> > config;
 	std::string title;
 	std::string scope;
 } t_node;
@@ -26,8 +23,8 @@ typedef struct s_node
 class Parser
 {
 private:
-	t_node *tree;
 	std::vector<std::string> *config_options;
+	t_node *tree;
 	std::vector<std::string> *config_labels;
 	const std::string whitespaces;
 	Parser(const Parser & ref);
@@ -43,6 +40,12 @@ public:
 	void print_config(t_node &head, int k);
 	void configPrinter();
 	bool countChar(std::vector<std::string> buffer);
+	bool in_config(std::map<std::string, std::vector<std::string> > &temp, std::string key, std::string value) const;
+	t_node *getLocationNode(t_node *head, const std::string &path, t_conf_map & ret) const;
+	void join_map(t_conf_map & map1, t_conf_map & map2) const;
+	void print_config(t_conf_map &maper) const;
+	t_conf_map getServerConfig(std::string const & name, std::string const & port, std::string const & path) const;
+	t_node *getServerNode(t_node *head, const std::string &name, const std::string &port, t_conf_map &ret) const;
 };
 
 #endif

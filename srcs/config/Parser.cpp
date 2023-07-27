@@ -93,25 +93,14 @@ int Parser::analyzer(t_node *head, std::vector<std::string> &buffer)
 		{
 			removeLastChar(current_line);
 			std::stringstream line_tmp(current_line);
-			std::string word;
-			line_tmp >> word;
-			t_pair *key_val;
-			try
-			{
-				key_val = new t_pair();
-			} catch (std::bad_alloc &)
-			{
-				throw Error::MemoryAllocationException();
-			}
-			key_val->first = word;
-			if (std::find(this->config_options->begin(), this->config_options->end(), word) ==
-				this->config_options->end())
+			std::string word, key;
+			line_tmp >> key;
+			if (std::find(this->config_options->begin(), this->config_options->end(), key) == this->config_options->end())
 				throw Error::ConfigParsingException(word);
 			while (line_tmp >> word)
 			{
-				key_val->second.push_back(word);
+				head->config[key].push_back(word);
 			}
-			head->config.push_back(key_val);
 			buffer.erase(buffer.begin());
 		} else
 		{
@@ -178,10 +167,10 @@ void Parser::deleteParsingTable(t_node *head)
 {
 	if(!head)
 		return ;
-	for (size_t i = 0; i < head->config.size(); i++)
-	{
-		delete head->config[i];
-	}
+//	for (size_t i = 0; i < head->config.size(); i++)
+//	{
+//		delete head->config[i];
+//	}
 
 	if(!head->branches.empty())
 	{
@@ -202,26 +191,27 @@ void Parser::configPrinter()
 
 void Parser::print_config(t_node &head, int k)
 {
-	for (size_t i = 0; i < head.branches.size(); i++)
-	{
-		int temp = k-1;
-		while(temp>=0){std::cout << "\t";temp--;}
-		temp = k;
-		std::cout << head.branches[i]->title << " context : ["<< head.branches[i]->scope << "]" << std::endl;
-		while(temp>=0){std::cout << "\t";temp--;}
-		std::cout << "config :" << std::endl;
-		for (size_t n = 0; n < head.branches[i]->config.size(); n++)
-		{
-			temp = k+1;
-			while(temp>=0){std::cout << "\t";temp--;}
-			std::cout << "-> " <<  head.branches[i]->config[n]->first << " ";
-			for (size_t j = 0; j < head.branches[i]->config[n]->second.size(); j++)
-			{
-				std::cout << head.branches[i]->config[n]->second[j] << " ";
-			}
-			std::cout << std::endl;
-		}
-		print_config(*head.branches[i], k+1);
-	}
+	(void)head;
+	(void)k;
+//	for (size_t i = 0; i < head.branches.size(); i++)
+//	{
+//		int temp = k-1;
+//		while(temp>=0){std::cout << "\t";temp--;}
+//		temp = k;
+//		std::cout << head.branches[i]->title << " context : ["<< head.branches[i]->scope << "]" << std::endl;
+//		while(temp>=0){std::cout << "\t";temp--;}
+//		std::cout << "config :" << std::endl;
+//		for (size_t n = 0; n < head.branches[i]->config.size(); n++)
+//		{
+//			temp = k+1;
+//			while(temp>=0){std::cout << "\t";temp--;}
+//			std::cout << "-> " <<  head.branches[i]->config[n]->first << " ";
+//			for (size_t j = 0; j < head.branches[i]->config[n]->second.size(); j++)
+//			{
+//				std::cout << head.branches[i]->config[n]->second[j] << " ";
+//			}
+//			std::cout << std::endl;
+//		}
+//		print_config(*head.branches[i], k+1);
+//	}
 }
-

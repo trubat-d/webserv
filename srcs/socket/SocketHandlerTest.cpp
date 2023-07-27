@@ -78,7 +78,6 @@ int		Socket::isSocket(uintptr_t socket) const
 int	Socket::addSocket(int index)
 {
 	int				newSocket;
-	int *			masterSocket;
 	struct kevent	newClient = {};
 
 	newSocket = accept(this->_socket.at(index), NULL, NULL);
@@ -86,10 +85,7 @@ int	Socket::addSocket(int index)
 		throw(Error::AcceptException()); //return (1);
 	if (fcntl(newSocket, F_SETFL, O_NONBLOCK) == -1)
 		throw(Error::FcntlException()); //return (1);
-	masterSocket = 	new int;
-	*masterSocket = this->_socket.at(index);
-	//TODO: deja mettre dans int val du port et nom le int du masterSocket
-	EV_SET(&newClient, newSocket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, masterSocket);
+	EV_SET(&newClient, newSocket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
 	if (kevent(this->getKqueue(), &newClient, 1, NULL, 0, NULL) == -1)
 		throw(Error::KeventException()); //return (1);
 	this->_rcv.insert(std::pair<int, std::string>(newSocket, ""));
@@ -108,12 +104,9 @@ int	Socket::readSocket(struct kevent & socket)
 	{
 		this->_rcv.erase(this->_snd.find(static_cast <int> (socket.ident)));
 		this->_snd.erase(this->_snd.find(static_cast <int> (socket.ident)));
-		//EV_SET(&change[0], socket.ident, EVFILT_READ, EV_DELETE, 0, 0, 0);
-		socket.flags = EV_DELETE;
-		if (socket.udata)
-			delete reinterpret_cast<int *> (socket.udata);
+		EV_SET(&change[0], socket.ident, EVFILT_READ, EV_DELETE, 0, 0, 0);
 		close(static_cast <int> (socket.ident));
-		return (kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL) == -1);
+		return (kevent(this->getKqueue(), change, 1, NULL, 0, NULL) == -1);
 	}
 	if ((it = this->_rcv.find(static_cast <int> (socket.ident))) == this->_rcv.end())
 		return (1);
@@ -125,8 +118,8 @@ int	Socket::readSocket(struct kevent & socket)
 	if(length < 2047)
 	{
 		this->processSocket(socket, it);
-		EV_SET(&change[0], socket.ident, EVFILT_READ, EV_DELETE, 0, 0, socket.udata);
-		EV_SET(&change[1], socket.ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, socket.udata);
+		EV_SET(&change[0], socket.ident, EVFILT_READ, EV_DELETE, 0, 0, 0);
+		EV_SET(&change[1], socket.ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, 0);
 		if (kevent(this->getKqueue(), change, 2, NULL, 0, NULL) == -1)
 			throw(Error::KeventException()); //return (1);
 	}
@@ -136,13 +129,12 @@ int	Socket::readSocket(struct kevent & socket)
 int	Socket::processSocket(struct kevent & socket, map_it & it)
 {
 	HttpRequest		request(it->second);
-	int 			masterSocket = *(reinterpret_cast <int *> (socket.udata));
 
 	this->_rcv.erase(it);
 	if (request.parseRequest())
 	{
 		HttpResponse	response(request);
-		if (response.processRequest(masterSocket))
+		if (response.processRequest())
 		{
 			if ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
 				return 1;
@@ -161,11 +153,11 @@ int	Socket::writeSocket(struct kevent & socket)
 
 	if (socket.flags & EV_EOF)
 	{
-		//    ?     this->_rcv.erase(this->_snd.find(static_cast <int> (socket.ident)));
+		this->_rcv.erase(this->_snd.find(static_cast <int> (socket.ident)));
 		this->_snd.erase(this->_snd.find(static_cast <int> (socket.ident)));
-		socket.flags = EV_DELETE;
 		if (socket.udata)
 			delete reinterpret_cast<int *> (socket.udata);
+		EV_SET(&socket, socket.ident, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
 		close(static_cast <int> (socket.ident));
 		return (kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL) == -1);
 	}
@@ -178,9 +170,7 @@ int	Socket::writeSocket(struct kevent & socket)
 	if (it->second.empty())
 	{
 		this->_snd.erase(it);
-		EV_SET(&socket, static_cast <int> (socket.ident), EVFILT_WRITE, EV_DELETE, 0, 0, socket.udata);
-		if (socket.udata)
-			delete reinterpret_cast<int *> (socket.udata);
+		EV_SET(&socket, static_cast <int> (socket.ident), EVFILT_WRITE, EV_DELETE, 0, 0, 0);
 		return (kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL) == -1 || \
 		close(static_cast <int> (socket.ident)) == -1);
 	}

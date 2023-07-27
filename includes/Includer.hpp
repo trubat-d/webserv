@@ -5,5 +5,6 @@
 
 #include "Socket.hpp"
 #include "ErrorHandler.hpp"
+#include "Http.hpp"
 
 #endif

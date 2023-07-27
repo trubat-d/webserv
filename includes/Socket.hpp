@@ -17,6 +17,8 @@
 
 class Socket {
 
+	typedef std::map<int, std::string>::iterator 	map_it;
+
 public:
 
 	Socket();
@@ -34,9 +36,8 @@ public:
 	int run();
 	int	addSocket(int index);
 	int	readSocket(struct kevent & socket);
+	int processSocket(struct kevent & socket, map_it & it);
 	int	writeSocket(struct kevent & socket);
-
-	typedef std::map<int, std::string>::iterator 	map_it;
 
 private:
 

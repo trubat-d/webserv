@@ -6,7 +6,7 @@ Socket::Socket()
 	if (this->_socket.at(0) < 0)
 		throw(Error::SocketException());
 	this->_hint.sin_port = htons(80);
-	//this->_hint.sin_family = AF_INET;
+	this->_hint.sin_family = AF_INET;
 	this->_hint.sin_addr.s_addr = htonl(INADDR_ANY);
 	if (bind(this->_socket.at(0), reinterpret_cast <struct sockaddr *> (&this->_hint), sizeof(this->_hint)) < 0)
 		throw(Error::BindException());
@@ -130,6 +130,7 @@ int	Socket::readSocket(struct kevent & socket)
 		if (kevent(this->getKqueue(), change, 2, NULL, 0, NULL) == -1)
 			throw(Error::KeventException()); //return (1);
 	}
+	//TODO: du code pour gerer separation entre 2 request a la suite
 	return (0);
 }
 
@@ -141,16 +142,16 @@ int	Socket::processSocket(struct kevent & socket, map_it & it)
 	this->_rcv.erase(it);
 	if (request.parseRequest())
 	{
-		HttpResponse	response(request);
+		HttpResponse	response(request, socket);
 		if (response.processRequest(masterSocket))
 		{
 			if ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
 				return 1;
-			it->second = response.generateResponse();
+			it->second = response.generateResponse(socket);
 		}
-		//it->second = response.genereateError();
+		//TODO it->second = response.genereateError();
 	}
-	//it->second = reponse pour mauvaise sementic dnas request HTTP 1.1;
+	//TODO it->second = reponse pour mauvaise sementic dans request HTTP 1.1;
 	return 0;
 }
 
@@ -218,6 +219,7 @@ int	Socket::run()
 				(events[i].filter == EVFILT_WRITE && this->writeSocket(events[i])))
 				throw(Error::TcpException());
 		}
+		//TODO: arreter exception quand une erreur de read ou write, laisser tourner le serveur
 	}
 }
 

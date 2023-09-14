@@ -91,6 +91,46 @@ public:
 			return ("TcpException: Unexpected behavior");
 		}
 	};
+	class getSockNameException: public std::exception
+	{
+	public:
+		virtual const char* what() const throw()
+		{
+			return ("getSockName: Unexpected behavior");
+		}
+	};
+	class getNameInfoException: public std::exception
+	{
+	public:
+		virtual const char* what() const throw()
+		{
+			return ("getnameinfo: Unexpected behavior");
+		}
+	};
+	class AccessException: public std::exception
+	{
+	public:
+		virtual const char* what() const throw()
+		{
+			return ("access: Unexpected behavior");
+		}
+	};
+	class PipeException: public std::exception
+	{
+	public:
+		virtual const char* what() const throw()
+		{
+			return ("pipe: Unexpected behavior");
+		}
+	};
+	class ForkException: public std::exception
+	{
+	public:
+		virtual const char* what() const throw()
+		{
+			return ("fork: Unexpected behavior");
+		}
+	};
 };
 
 #endif

@@ -1,8 +1,8 @@
 #include "Http.hpp"
 
 HttpRequest::HttpRequest() {}
-HttpRequest::HttpRequest(const std::string &request): _request(request) {}
-HttpRequest::HttpRequest(const HttpRequest &instance): _headers(instance._headers) {}
+HttpRequest::HttpRequest(const std::string & request): _request(request) {}
+HttpRequest::HttpRequest(const HttpRequest & instance): _headers(instance._headers) {}
 HttpRequest::~HttpRequest() {}
 
 HttpRequest &	HttpRequest::operator=(const HttpRequest &instance)

@@ -1,9 +1,9 @@
 #ifndef HTTP_HPP
 #define HTTP_HPP
 
-#include <iostream>
-#include <map>
-#include <string>
+#include "Includer.hpp"
+
+#define NaV "NoValueFindInThisHeader"
 
 class HttpRequest {
 
@@ -41,24 +41,32 @@ private:
 
 ///////////////////////////////////////////////////////////////////////
 
-class HttpResponse
-{
+class HttpResponse {
+
 public:
+
+	typedef std::map<std::string, std::string>::const_iterator	map_it;
+
 	HttpResponse();
-	HttpResponse(HttpRequest const & instance);
+	HttpResponse(HttpRequest const & instance, struct kevent & socket);
 	HttpResponse(HttpResponse const & instance);
 	~HttpResponse();
 
 	HttpResponse & operator=(HttpResponse const & instance);
 
-	std::string generateResponse();
+	std::string getHeader(std::string const & key) const;
+	//char 		**setEnv(struct kevent & socket);
+
+	std::string generateResponse(struct kevent & socket);
 	bool		processRequest(int masterSocket) const;
+
 private:
 
-	std::string 										_ctrlData;
+	std::string 										_ctrlData[3]; //[0] = GET ; [1] = /path ; [2] = HTTP 1.1
 	std::map<std::string, std::string>					_headers;
 	std::string											_body;
 	std::map< std::string, std::vector<std::string> >	_config;
+	std::vector<std::string>							_cgiEnv;
 };
 
 #endif

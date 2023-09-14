@@ -22,13 +22,6 @@ typedef struct s_node
 
 class Parser
 {
-private:
-	std::vector<std::string> *config_options;
-	t_node *tree;
-	std::vector<std::string> *config_labels;
-	const std::string whitespaces;
-	Parser(const Parser & ref);
-	Parser & operator=(const Parser & ref);
 public:
 	Parser();
 	~Parser();
@@ -46,6 +39,13 @@ public:
 	void print_config(t_conf_map &maper) const;
 	t_conf_map getServerConfig(std::string const & name, std::string const & port, std::string const & path) const;
 	t_node *getServerNode(t_node *head, const std::string &name, const std::string &port, t_conf_map &ret) const;
+private:
+	std::vector<std::string> *config_options;
+	t_node *tree;
+	std::vector<std::string> *config_labels;
+	const std::string whitespaces;
+	Parser(const Parser & ref);
+	Parser & operator=(const Parser & ref);
 };
 
 #endif

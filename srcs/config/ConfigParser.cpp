@@ -51,9 +51,7 @@ std::vector<std::string> *configOptionsGen()
 	config_options->push_back("allow");
 	config_options->push_back("deny");
 	config_options->push_back("index");
-	config_options->push_back("fastcgi_pass");
-	config_options->push_back("include");
-	config_options->push_back("fastcgi_param");
+	config_options->push_back("cgi");
 	config_options->push_back("return");
 	config_options->push_back("alias");
 	config_options->push_back("autoindex");
@@ -143,7 +141,6 @@ t_conf_map Parser::getServerConfig(std::string const & name, std::string const &
 	join_map(ret,this->tree->config);
 	t_node *server = getServerNode(this->tree, name, port, ret);
 	getLocationNode(server, path, ret);
-	print_config(ret);
 	return ret;
 }
 
@@ -195,7 +192,6 @@ t_node *Parser::getLocationNode(t_node *head, std::string const & path, t_conf_m
 			if(head->branches[i]->title != "location")
 				continue;
 			size_t title_size = head->branches[i]->scope.length();
-//			std::cout << path << " " << head->branches[i]->scope << std::endl;
 			if(!path.compare(0,title_size, head->branches[i]->scope))
 			{
 				if(!longest_path || title_size > longest_path->scope.length())
@@ -210,7 +206,6 @@ t_node *Parser::getLocationNode(t_node *head, std::string const & path, t_conf_m
 		}
 		else
 		{
-			std::cout << longest_path->scope <<  std::endl;
 			if(longest_path->branches.empty())
 			{
 				join_map(ret, longest_path->config);

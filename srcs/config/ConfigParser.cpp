@@ -1,40 +1,40 @@
 #include "Includer.hpp"
 
-int main(int ac, char ** av)
-{
-	try
-	{
-		if (ac == 2)
-		{
-			Parser config_parser;
-			std::ifstream file;
-			file.open("./conf/" + std::string(av[1]), std::ifstream::in);
-			if (file.fail())
-				return 1;
-			std::vector<std::string> buffer;
-			std::string temp;
-			while (std::getline(file, temp))
-			{
-				if (temp.empty() || is_only_wp(temp))
-					continue;
-				buffer.push_back(temp);
-			}
-			config_parser.tree_config(buffer);
-			config_parser.configPrinter();
-			std::string name = "example.com";
-			std::string port = "580";
-			std::string path = "/dawdawdawd";
-			config_parser.getServerConfig(name, port, path);
-			file.close();
-			if (file.fail())
-				return 1;
-		}
-	} catch (Error::ConfigParsingException & e)
-	{
-		std::cerr << e.what() << std::endl;
-	}
-	return 0;
-}
+//int main(int ac, char ** av)
+//{
+//	try
+//	{
+//		if (ac == 2)
+//		{
+//			Parser config_parser;
+//			std::ifstream file;
+//			file.open("./conf/" + std::string(av[1]), std::ifstream::in);
+//			if (file.fail())
+//				return 1;
+//			std::vector<std::string> buffer;
+//			std::string temp;
+//			while (std::getline(file, temp))
+//			{
+//				if (temp.empty() || is_only_wp(temp))
+//					continue;
+//				buffer.push_back(temp);
+//			}
+//			config_parser.tree_config(buffer);
+//			config_parser.configPrinter();
+//			std::string name = "example.com";
+//			std::string port = "580";
+//			std::string path = "/dawdawdawd";
+//			config_parser.getServerConfig(name, port, path);
+//			file.close();
+//			if (file.fail())
+//				return 1;
+//		}
+//	} catch (Error::ConfigParsingException & e)
+//	{
+//		std::cerr << e.what() << std::endl;
+//	}
+//	return 0;
+//}
 
 std::vector<std::string> *configOptionsGen()
 {

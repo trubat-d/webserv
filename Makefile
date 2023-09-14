@@ -2,17 +2,23 @@
 
 NAME		=	WebServer
 
-SRC			=	./srcs/config/ConfigParser.cpp ./srcs/config/Parser.cpp ./srcs/error/ErrorHandler.cpp ./srcs/utils/utils1.cpp ./srcs/socket/SocketHandler.cpp ./srcs/http/RequestHandler.cpp ./srcs/http/ResponseHandler.cpp
+SRC			=	./srcs/cgi/CGIHandler.cpp \
+				./srcs/config/ConfigParser.cpp ./srcs/config/Parser.cpp \
+				./srcs/error/ErrorHandler.cpp \
+				./srcs/http/RequestHandler.cpp ./srcs/http/ResponseHandler.cpp \
+				./srcs/socket/SocketHandler.cpp \
+				./srcs/utils/utils1.cpp \
+				main.cpp
 
 
-INCLUDES    = ./includes/
+INCLUDES	= ./includes/
 
 OBJS		=	$(SRC:.cpp=.o)
 
-CC		=	c++
+CC			=	c++
 
 # -std=c++98 displays an error if an unauthorized function is left in the code
-CXXFLAGS		= -std=c++98 -Wall -Wextra -Werror -std=c++98 -g -fsanitize=address -I ${INCLUDES}
+CXXFLAGS		= -std=c++98 -Wall -Wextra -Werror -g3 -fsanitize=address -I ${INCLUDES}
 
 EXE_NAME	=	-o $(NAME)
 

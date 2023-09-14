@@ -193,25 +193,25 @@ void Parser::print_config(t_node &head, int k)
 {
 	(void)head;
 	(void)k;
-//	for (size_t i = 0; i < head.branches.size(); i++)
-//	{
-//		int temp = k-1;
-//		while(temp>=0){std::cout << "\t";temp--;}
-//		temp = k;
-//		std::cout << head.branches[i]->title << " context : ["<< head.branches[i]->scope << "]" << std::endl;
-//		while(temp>=0){std::cout << "\t";temp--;}
-//		std::cout << "config :" << std::endl;
-//		for (size_t n = 0; n < head.branches[i]->config.size(); n++)
-//		{
-//			temp = k+1;
-//			while(temp>=0){std::cout << "\t";temp--;}
-//			std::cout << "-> " <<  head.branches[i]->config[n]->first << " ";
-//			for (size_t j = 0; j < head.branches[i]->config[n]->second.size(); j++)
-//			{
-//				std::cout << head.branches[i]->config[n]->second[j] << " ";
-//			}
-//			std::cout << std::endl;
-//		}
-//		print_config(*head.branches[i], k+1);
-//	}
+	for (size_t i = 0; i < head.branches.size(); i++)
+	{
+		int temp = k-1;
+		while(temp>=0){std::cout << "\t";temp--;}
+		temp = k;
+		std::cout << head.branches[i]->title << " context : ["<< head.branches[i]->scope << "]" << std::endl;
+		while(temp>=0){std::cout << "\t";temp--;}
+		std::cout << "config :" << std::endl;
+		for (size_t n = 0; n < head.branches[i]->config.size(); n++)
+		{
+			temp = k+1;
+			while(temp>=0){std::cout << "\t";temp--;}
+			std::cout << "-> " <<  head.branches[i]->config[n]->first << " ";
+			for (size_t j = 0; j < head.branches[i]->config[n]->second.size(); j++)
+			{
+				std::cout << head.branches[i]->config[n]->second[j] << " ";
+			}
+			std::cout << std::endl;
+		}
+		print_config(*head.branches[i], k+1);
+	}
 }

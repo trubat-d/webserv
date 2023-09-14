@@ -11,6 +11,7 @@ HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
 	char host[NI_MAXHOST];
 	char service[NI_MAXSERV];
 
+	this->_masterSocketInfo = * reinterpret_cast<uDada *>(socket.udata);
 	ss << instance.getCtrlData();
 	for (int i = 0; i < 3; i++)
 		ss >> this->_ctrlData[i];
@@ -56,14 +57,14 @@ HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
 	//tmp += service;
 	this->_cgiEnv.push_back("REMOTE_ADDR=" + tmp); // IP address client
 	this->_cgiEnv.push_back("REMOTE_HOST=" + tmp); // IP adress client again
-	if (getsockname(*reinterpret_cast <int *> (socket.udata), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
+	if (getsockname(*reinterpret_cast <int *> (this->_masterSocketInfo.masterSocket), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
 		throw(Error::getSockNameException());
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
 		throw(Error::getNameInfoException());
 	tmp = host;
 	this->_cgiEnv.push_back("SERVER_NAME=" + tmp); // server hostname or IP address
 	ss.clear();
-	ss << ntohs(sockAddr.sin_port);
+	ss << this->_masterSocketInfo.masterPort;
 	ss >> tmp;
 	this->_cgiEnv.push_back("SERVER_PORT=" + tmp); // port on host running
 }
@@ -127,6 +128,63 @@ bool	HttpResponse::processRequest(int masterSocket) const
 	return true; //1) checker le control data
 }
 
+std::string HttpResponse::methodGetHandler()
+{
+
+}
+
+std::string HttpResponse::methodPostHandler()
+{
+
+}
+
+std::string HttpResponse::methodDeleteHandler()
+{
+
+}
+
+std::string HttpResponse::cgiHandler(std::string cgiPath)
+{
+	int 		fd[2];
+	int			status;
+	char		buffer[1024];
+	std::string	response;
+
+	pipe(fd);
+	int pid = fork();
+	if (!pid)
+	{
+		dup2(fd[1], STDOUT_FILENO);
+		close(fd[0]);
+		close(fd[1]);
+		//jamais arguments car tout dans env, donc file, argv are same)
+		char *const args[2];
+		args[0] = cgiPath.c_str();
+		args[1] = NULL;
+		if (execve(cgiPath.c_str(), args, this->_cgiEnv.data()) == -1)
+			exit(-1);
+		exit(0);
+	}
+	close (fd[0]);
+	close (fd[1]);
+	waitpid(pid, &status, 0);
+	if (status == -1)
+		return "error cgi";
+	ssize_t size = read(fd[0], buffer, 1023);
+	if (size == -1)
+		return "errror cgi";
+	while (size > 0)
+	{
+		buffer[size] = 0;
+		response += buffer;
+		size = read(fd[0], buffer, 1023);
+		if (size == -1)
+			return "errror cgi";
+	}
+	close (fd[0]);
+	return response;
+}
+
 std::string HttpResponse::generateResponse(struct kevent & socket)
 {
 	//TODO: checker si cgi needed or not, si oui fork ses grand morts;
@@ -151,34 +209,6 @@ std::string HttpResponse::generateResponse(struct kevent & socket)
 					this->_ctrlData[1].erase(pos + 4, _ctrlData[1].size() - pos - 4);
 				}
 			}
-			int 	fd[2];
-			int		status;
-			char	buffer[1024];
-
-			pipe(fd);
-			int pid = fork();
-			if (!pid)
-			{
-				dup2(fd[1], STDOUT_FILENO);
-				close(fd[0]);
-				close(fd[1]);
-				//jamais arguments car tout dans env, donc file, argv are same)
-//				if (execve(/*TODO*/, /*TODO*/, this->_cgiEnv.data()) == -1)
-//					exit(-1);
-				exit(0);
-			}
-			waitpid(pid, &status, 0);
-			if (status == -1)
-				return "error cgi";
-			close (fd[1]);
-			ssize_t size = read(fd[0], buffer, 1023);
-			while (size > 0)
-			{
-				buffer[size] = 0;
-				response += buffer;
-				size = read(fd[0], buffer, 1023);
-			}
-			close (fd[0]);
 		}
 		//basic case
 		{

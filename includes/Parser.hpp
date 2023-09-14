@@ -31,8 +31,8 @@ public:
 	char getLastChar(std::string str);
 	char removeLastChar(std::string &line);
 	void deleteParsingTable(t_node *head);
-	void print_config(t_node &head, int k);
-	void configPrinter();
+	//void print_config(t_node &head, int k);
+	//void configPrinter();
 	bool countChar(std::vector<std::string> buffer);
 	bool in_config(std::map<std::string, std::vector<std::string> > &temp, std::string key, std::string value) const;
 	t_node *getLocationNode(t_node *head, const std::string &path, t_conf_map & ret) const;

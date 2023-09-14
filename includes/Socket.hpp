@@ -16,6 +16,11 @@
 
 #include "Includer.hpp"
 
+typedef struct uData {
+	int masterSocket;
+	int masterPort;
+} uDada;
+
 class Socket {
 
 	typedef std::map<int, std::string>::iterator 	map_it;

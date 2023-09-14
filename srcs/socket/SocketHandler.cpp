@@ -78,18 +78,24 @@ int		Socket::isSocket(uintptr_t socket) const
 int	Socket::addSocket(int index)
 {
 	int				newSocket;
-	int *			masterSocket;
+	uDada *			info;
 	struct kevent	newClient = {};
+	struct sockaddr_in	sockAddr = {};
+	socklen_t len = sizeof(sockAddr);
+
 
 	newSocket = accept(this->_socket.at(index), NULL, NULL);
 	if (newSocket < 0)
 		throw(Error::AcceptException()); //return (1);
 	if (fcntl(newSocket, F_SETFL, O_NONBLOCK) == -1)
 		throw(Error::FcntlException()); //return (1);
-	masterSocket = 	new int;
-	*masterSocket = this->_socket.at(index);
+	info = new uDada;
+	info->masterSocket = this->_socket.at(index);
+	if (getsockname(this->_socket.at(index), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
+		throw(Error::getSockNameException());
+	info->masterPort = ntohs(sockAddr.sin_port);
 	//TODO: deja mettre dans int val du port et nom le int du masterSocket
-	EV_SET(&newClient, newSocket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, masterSocket);
+	EV_SET(&newClient, newSocket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, info);
 	if (kevent(this->getKqueue(), &newClient, 1, NULL, 0, NULL) == -1)
 		throw(Error::KeventException()); //return (1);
 	this->_rcv.insert(std::pair<int, std::string>(newSocket, ""));
@@ -137,13 +143,12 @@ int	Socket::readSocket(struct kevent & socket)
 int	Socket::processSocket(struct kevent & socket, map_it & it)
 {
 	HttpRequest		request(it->second);
-	int 			masterSocket = *(reinterpret_cast <int *> (socket.udata));
 
 	this->_rcv.erase(it);
 	if (request.parseRequest())
 	{
 		HttpResponse	response(request, socket);
-		if (response.processRequest(masterSocket))
+		if (response.processRequest())
 		{
 			if ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
 				return 1;

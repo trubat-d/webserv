@@ -57,8 +57,13 @@ public:
 	std::string getHeader(std::string const & key) const;
 	//char 		**setEnv(struct kevent & socket);
 
+	bool		processRequest() const;
 	std::string generateResponse(struct kevent & socket);
-	bool		processRequest(int masterSocket) const;
+
+	std::string methodGetHandler();
+	std::string methodPostHandler();
+	std::string methodDeleteHandler();
+	std::string cgiHandler(std::string cgiPath);
 
 private:
 
@@ -67,6 +72,7 @@ private:
 	std::string											_body;
 	std::map< std::string, std::vector<std::string> >	_config;
 	std::vector<std::string>							_cgiEnv;
+	uDada												_masterSocketInfo;
 };
 
 #endif

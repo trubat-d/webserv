@@ -120,12 +120,40 @@ std::string HttpResponse::getHeader(std::string const & key) const
 //	return (env);
 //}
 
-bool	HttpResponse::processRequest(int masterSocket) const
+bool	HttpResponse::processRequest(Parser &config)
 {
-	(void) masterSocket;
 	//TODO:	 comparer contenu headers avec .conf si all ok, ex: si method de request sur uri allow sur par .conf, etc....
+	//TODO: REMOVE THE TESTS
+	std::cout << "Process request info"<< std::endl;
+	std::cout << this->_masterSocketInfo.masterPort << std::endl;
+	std::cout << getHeader("Host") << std::endl;
+	std::cout << this->_ctrlData[1] << std::endl;
+	//TODO: ----------------------------------------------------------------------------------------------------------------
+	this->_config = new t_conf_map(config.getServerConfig(getHeader("Host"), std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]));
+	return true;
+}
 
-	return true; //1) checker le control data
+bool HttpResponse::validateBodySize(std::string &bodySize)
+{
+	if (bodySize.empty())
+		return false;
+	if(bodySize.find('M') != std::string::npos || bodySize.find('m') != std::string::npos)
+	{
+		bodySize.pop_back();
+		if(bodySize.empty() ||
+			bodySize.find_first_not_of("0123456789", 0) != std::string::npos)
+			return false;
+		return this->_body.size() < static_cast<unsigned long>(std::atol(bodySize.c_str())) * 1000000;
+	}
+	else if (bodySize.find('K') != std::string::npos || bodySize.find('k') != std::string ::npos)
+	{
+		bodySize.pop_back();
+		if(bodySize.empty() ||
+		   bodySize.find_first_not_of("0123456789", 0) != std::string::npos)
+			return false;
+		return this->_body.size() < static_cast<unsigned long>(std::atol(bodySize.c_str())) * 1000;
+	}
+	return this->_body.size() < static_cast<unsigned long>(std::atol(bodySize.c_str()));
 }
 
 std::string HttpResponse::methodGetHandler()

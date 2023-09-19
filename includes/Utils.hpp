@@ -6,6 +6,7 @@ class Utils
 {
 public:
 	static char *concatToCharset(std::string &str1, std::string &str2);
+	static std::vector<int> vecStoI(std::vector<std::string> input);
 };
 
 

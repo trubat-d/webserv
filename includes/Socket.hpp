@@ -16,6 +16,9 @@
 
 #include "Includer.hpp"
 
+typedef std::map<std::string, std::vector<std::string> > t_conf_map;
+class Parser;
+
 typedef struct uData {
 	int masterSocket;
 	int masterPort;
@@ -28,7 +31,7 @@ class Socket {
 public:
 
 	Socket();
-	Socket(std::vector<int> & port);
+	Socket(std::vector<int> & port, Parser *config);
 	Socket(Socket const & instance);
 	~Socket();
 
@@ -52,7 +55,7 @@ private:
 	struct sockaddr_in			_hint;
 	std::map<int, std::string>	_rcv;
 	std::map<int, std::string>	_snd;
-
+	Parser						*_configHead;
 };
 
 #endif

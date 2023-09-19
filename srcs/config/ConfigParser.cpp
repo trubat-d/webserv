@@ -1,4 +1,6 @@
 #include "Includer.hpp"
+#include "Parser.hpp"
+
 //
 //int main(int ac, char ** av)
 //{
@@ -6,7 +8,7 @@
 //	{
 //		if (ac == 2)
 //		{
-//			Parser config_parser;
+//			Parser config_parser("default.conf");
 //			std::ifstream file;
 //			file.open("./conf/" + std::string(av[1]), std::ifstream::in);
 //			if (file.fail())
@@ -22,7 +24,7 @@
 //			config_parser.tree_config(buffer);
 ////			config_parser.configPrinter();
 //			std::string name = "example.com";
-//			std::string port = "580";
+//			std::string port = "80";
 //			std::string path = "/kapouet/trob";
 //			std::map<std::string, std::vector<std::string> > serv_cfg = config_parser.getServerConfig(name, port, path);
 //			config_parser.print_config(serv_cfg);
@@ -136,13 +138,19 @@ bool is_only_wp(std::string str)
 	return true;
 }
 
-t_conf_map Parser::getServerConfig(std::string const & name, std::string const & port, std::string const & path) const
+t_conf_map Parser::getServerConfig(std::string const & name , std::string const & port, std::string const & path) const
 {
 	t_conf_map ret;
 	join_map(ret,this->tree->config);
+
 	t_node *server = getServerNode(this->tree, name, port, ret);
 	getLocationNode(server, path, ret);
 	return ret;
+}
+
+t_node *Parser::getHead()
+{
+	return this->tree;
 }
 
 t_node *Parser::getServerNode(t_node *head, std::string const & name, std::string const & port, t_conf_map & ret) const
@@ -233,9 +241,37 @@ void Parser::join_map(t_conf_map & map1, t_conf_map & map2) const
 	}
 }
 
+void Parser::getPorts(std::vector<std::string> &storage, t_node* last_loc)
+{
+	if(last_loc->branches.empty())
+		return ;
+	//TODO: REMOVE (ONLY FOR TESTS) vvvvvvv
+	for(t_conf_map::iterator it = last_loc->config.begin(); it != last_loc->config.end(); it++)
+	{
+		std::cout << it->first << "with values : ";
+		for(size_t x = 0; x < it->second.size(); x++)
+		{
+			std::cout << it->second[x] << " ";
+		}
+		std::cout << std::endl;
+	}
+	//TODO: REMOVE (ONLY FOR TESTS) ^^^^^^
+	for(size_t i = 0; i < last_loc->config.at("listen").size(); i++)
+	{
+		if(std::find(storage.begin(), storage.end(), last_loc->config.at("listen")[i]) != storage.end())
+		{
+			storage.push_back(last_loc->config.at("listen")[i]);
+		}
+	}
+	for (size_t i = 0; i < last_loc->branches.size(); i++)
+	{
+		getPorts(storage, last_loc->branches[i]);
+	}
+}
+
 void Parser::print_config(t_conf_map & maper) const
 {
-	std::cout << " PRINTING CONFIG "<< std::endl;
+	std::cout << " PRINTING CONFIG 1"<< std::endl;
 	for(t_conf_map::iterator it = maper.begin(); it != maper.end(); it++)
 	{
 		std::cout << "key : [" << it->first;
@@ -249,8 +285,30 @@ void Parser::print_config(t_conf_map & maper) const
 	std::cout << " END OF PRINTING CONFIG "<< std::endl;
 }
 
-
-
+bool Parser::method_error_checker(t_node &head) const
+{
+	bool val = true;
+	if(head.config.find("allow") != head.config.end() && head.config.find("deny") != head.config.end())
+	{
+		for(size_t i = 0; i < head.config.at("allow").size(); i++)
+		{
+			if(std::find(head.config.at("deny").begin(), head.config.at("deny").end(),head.config.at("allow")[i]) != head.config.at("deny").end())
+			{
+				val = false;
+				break;
+			}
+		}
+	}
+	else
+	{
+		for(size_t i = 0; i < head.branches.size(); i++)
+		{
+			std::cout << head.branches[i]->title << std::endl;
+			val = val && method_error_checker(*head.branches[i]);
+		}
+	}
+	return val;
+}
 
 
 

@@ -14,8 +14,9 @@ Socket::Socket()
 		throw(Error::BindException());
 }
 
-Socket::Socket(std::vector<int> & port)
+Socket::Socket(std::vector<int> & port, Parser *config)
 {
+	this->_configHead = config;
 	this->_hint.sin_family = AF_INET;
 	this->_hint.sin_addr.s_addr = htonl(INADDR_ANY);
 	for (size_t i = 0; i < port.size(); i++)
@@ -148,7 +149,7 @@ int	Socket::processSocket(struct kevent & socket, map_it & it)
 	if (request.parseRequest())
 	{
 		HttpResponse	response(request, socket);
-		if (response.processRequest())
+		if (response.processRequest(*this->_configHead))
 		{
 			if ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
 				return 1;

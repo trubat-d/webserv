@@ -7,10 +7,31 @@ Parser::~Parser()
 	delete this->config_options;
 }
 
-Parser::Parser() : whitespaces(" \t\n\v\r\f")
+Parser::Parser(std::string file_name) : whitespaces(" \t\n\v\r\f")
 {
 	this->config_labels = configLabelsGen();
 	this->config_options = configOptionsGen();
+	std::ifstream file;
+	file.open("./conf/" + std::string(file_name), std::ifstream::in);
+	if (file.fail())
+	{
+		std::string error = "File not Found !";
+		throw Error::ConfigParsingException(error);
+	}
+	std::vector<std::string> buffer;
+	std::string temp;
+	while (std::getline(file, temp))
+	{
+		if (temp.empty() || is_only_wp(temp))
+			continue;
+		buffer.push_back(temp);
+	}
+	this->tree = tree_config(buffer);
+	if(!method_error_checker(*this->tree))
+	{
+		std::string error = "Config Method is Allowed and Denied at the same time";
+		throw Error::ConfigParsingException(error);
+	}
 }
 
 Parser::Parser(const Parser &ref)
@@ -181,6 +202,7 @@ void Parser::deleteParsingTable(t_node *head)
 	}
 	delete head;
 }
+
 //
 //void Parser::configPrinter()
 //{

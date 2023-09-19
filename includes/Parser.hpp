@@ -24,7 +24,7 @@ typedef struct s_node
 class Parser
 {
 public:
-	Parser();
+	Parser(std::string file_name);
 	~Parser();
 	t_node *tree_config(std::vector<std::string> &buffer);
 	int analyzer(t_node *head, std::vector<std::string> &buffer);
@@ -40,6 +40,9 @@ public:
 	void print_config(t_conf_map &maper) const;
 	t_conf_map getServerConfig(std::string const & name, std::string const & port, std::string const & path) const;
 	t_node *getServerNode(t_node *head, const std::string &name, const std::string &port, t_conf_map &ret) const;
+	void getPorts(std::vector<std::string> & storage, t_node* last_loc);
+	t_node *getHead();
+	bool method_error_checker(t_node &head) const;
 private:
 	std::vector<std::string> *config_options;
 	t_node *tree;

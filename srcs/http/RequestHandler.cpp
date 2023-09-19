@@ -85,15 +85,15 @@ bool	HttpRequest::parseRequest()
 	return true;
 }
 
-void	HttpRequest::showData()
-{
-	std::cout << "test ctrl data: " << "[" << this->_ctrlData << "]" << std::endl;
-	typedef std::map<std::string, std::string>::iterator it;
-	it ite;
-
-	std::cout << "test map" << std::endl;
-	for (ite = this->_headers.begin(); ite != this->_headers.end(); ite++)
-		std::cout << "[" << ite->first << "]" << " " << "[" << ite->second << "]" << std::endl;
-
-	std::cout << "test body :" << "[" << this->_body << "]" << std::endl;
-}
+//void	HttpRequest::showData()
+//{
+//	std::cout << "test ctrl data: " << "[" << this->_ctrlData << "]" << std::endl;
+//	typedef std::map<std::string, std::string>::iterator it;
+//	it ite;
+//
+//	std::cout << "test map" << std::endl;
+//	for (ite = this->_headers.begin(); ite != this->_headers.end(); ite++)
+//		std::cout << "[" << ite->first << "]" << " " << "[" << ite->second << "]" << std::endl;
+//
+//	std::cout << "test body :" << "[" << this->_body << "]" << std::endl;
+//}

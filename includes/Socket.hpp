@@ -1,19 +1,6 @@
 #ifndef SOCKET_HPP
 #define SOCKET_HPP
 
-#include <sys/types.h>
-#include <sys/event.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <map>
-#include <vector>
-
-
-#include <sys/uio.h>
-#include <unistd.h>
-#include <fcntl.h>
-
 #include "Includer.hpp"
 
 typedef std::map<std::string, std::vector<std::string> > t_conf_map;

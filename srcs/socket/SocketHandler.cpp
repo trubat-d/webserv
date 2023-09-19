@@ -208,7 +208,7 @@ int	Socket::run()
 		fcntl(this->_socket[j], F_SETFL, O_NONBLOCK);
 		EV_SET(&newSocket, this->_socket[j], EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
 		if (kevent(this->getKqueue(), &newSocket, 1, NULL, 0, NULL) == -1)
-			exit (1);
+			exit (1);https://code-with-me.global.jetbrains.com/PkkxBUsLWVPorAtNxiVclA#p=CL&fp=7EE4813ED49455294FE29FF95F4D1003581BF67BE42C33C98F9944B9592851BA
 	}
 	while(true)
 	{

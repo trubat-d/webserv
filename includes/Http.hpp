@@ -41,6 +41,8 @@ private:
 
 ///////////////////////////////////////////////////////////////////////
 
+typedef std::vector<std::string>::iterator 	vec_it;
+
 class HttpResponse {
 
 public:
@@ -58,12 +60,14 @@ public:
 	//char 		**setEnv(struct kevent & socket);
 
 	bool		processRequest() const;
-	std::string generateResponse(struct kevent & socket);
+	std::string generateResponse();
 
-	std::string methodGetHandler();
-	std::string methodPostHandler();
-	std::string methodDeleteHandler();
-	std::string cgiHandler(std::string cgiPath);
+	std::string const methodGetHandler();
+	std::string const methodPostHandler();
+	std::string const methodDeleteHandler();
+    std::string const notCorrectMethodHandler();
+    std::string const fullResponse(char *path, std::string const & body, std::pair<int, std::string> infos);
+	std::string const cgiHandler();
 
 private:
 
@@ -71,7 +75,7 @@ private:
 	std::map<std::string, std::string>					_headers;
 	std::string											_body;
 	std::map< std::string, std::vector<std::string> >	_config;
-	std::vector<std::string>							_cgiEnv;
+	std::vector<char *>							        _cgiEnv;
 	uDada												_masterSocketInfo;
 };
 

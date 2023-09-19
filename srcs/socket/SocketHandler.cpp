@@ -94,7 +94,6 @@ int	Socket::addSocket(int index)
 	if (getsockname(this->_socket.at(index), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
 		throw(Error::getSockNameException());
 	info->masterPort = ntohs(sockAddr.sin_port);
-	//TODO: deja mettre dans int val du port et nom le int du masterSocket
 	EV_SET(&newClient, newSocket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, info);
 	if (kevent(this->getKqueue(), &newClient, 1, NULL, 0, NULL) == -1)
 		throw(Error::KeventException()); //return (1);
@@ -114,10 +113,10 @@ int	Socket::readSocket(struct kevent & socket)
 	{
 		this->_rcv.erase(this->_snd.find(static_cast <int> (socket.ident)));
 		this->_snd.erase(this->_snd.find(static_cast <int> (socket.ident)));
-		//EV_SET(&change[0], socket.ident, EVFILT_READ, EV_DELETE, 0, 0, 0);
+		EV_SET(&change[0], socket.ident, EVFILT_READ, EV_DELETE, 0, 0, socket.udata);
 		socket.flags = EV_DELETE;
 		if (socket.udata)
-			delete reinterpret_cast<int *> (socket.udata);
+			delete reinterpret_cast<uData *> (socket.udata);
 		close(static_cast <int> (socket.ident));
 		return (kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL) == -1);
 	}
@@ -152,11 +151,11 @@ int	Socket::processSocket(struct kevent & socket, map_it & it)
 		{
 			if ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
 				return 1;
-			it->second = response.generateResponse(socket);
+			it->second = response.generateResponse();
 		}
 		//TODO it->second = response.genereateError();
 	}
-	//TODO it->second = reponse pour mauvaise sementic dans request HTTP 1.1;
+	it->second = "HTTP/1.1 400 Bad Request\r\n";
 	return 0;
 }
 
@@ -171,7 +170,7 @@ int	Socket::writeSocket(struct kevent & socket)
 		this->_snd.erase(this->_snd.find(static_cast <int> (socket.ident)));
 		socket.flags = EV_DELETE;
 		if (socket.udata)
-			delete reinterpret_cast<int *> (socket.udata);
+			delete reinterpret_cast<uData *> (socket.udata);
 		close(static_cast <int> (socket.ident));
 		return (kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL) == -1);
 	}
@@ -186,7 +185,7 @@ int	Socket::writeSocket(struct kevent & socket)
 		this->_snd.erase(it);
 		EV_SET(&socket, static_cast <int> (socket.ident), EVFILT_WRITE, EV_DELETE, 0, 0, socket.udata);
 		if (socket.udata)
-			delete reinterpret_cast<int *> (socket.udata);
+			delete reinterpret_cast<uDada *> (socket.udata);
 		return (kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL) == -1 || \
 		close(static_cast <int> (socket.ident)) == -1);
 	}

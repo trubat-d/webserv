@@ -245,21 +245,14 @@ void Parser::getPorts(std::vector<std::string> &storage, t_node* last_loc)
 {
 	if(last_loc->branches.empty())
 		return ;
-	//TODO: REMOVE (ONLY FOR TESTS) vvvvvvv
-	for(t_conf_map::iterator it = last_loc->config.begin(); it != last_loc->config.end(); it++)
-	{
-		std::cout << it->first << "with values : ";
-		for(size_t x = 0; x < it->second.size(); x++)
-			std::cout << it->second[x] << " ";
-		std::cout << std::endl;
-	}
-	//TODO: REMOVE (ONLY FOR TESTS) ^^^^^^
     if(last_loc->config.find("listen") != last_loc->config.end())
     {
         for(size_t i = 0; i < last_loc->config.at("listen").size(); i++)
         {
-            if(std::find(storage.begin(), storage.end(), last_loc->config.at("listen")[i]) != storage.end())
+            if(std::find(storage.begin(), storage.end(), last_loc->config.at("listen")[i]) == storage.end())
+            {
                 storage.push_back(last_loc->config.at("listen")[i]);
+            }
         }
     }
 	for (size_t i = 0; i < last_loc->branches.size(); i++)

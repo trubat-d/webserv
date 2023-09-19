@@ -36,9 +36,9 @@ HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_METHOD=" + this->_ctrlData[0])); // method in meta data
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_URI=" + getHeader("Host") + this->_ctrlData[1])); // full path, meta data + host
 	this->_cgiEnv.push_back(Utils::stoa("SERVER_PROTOCOL=" + this->_ctrlData[2]));
-	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
+	//this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
 	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_NAME=" + this->_ctrlData[1])); // path relative to DOCUMENT_ROOT
-	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
+	//this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
 	if (getsockname(static_cast <int> (socket.ident), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
 		throw(Error::getSockNameException());
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
@@ -46,7 +46,7 @@ HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
 	tmp = host;
 	this->_cgiEnv.push_back(Utils::stoa("REMOTE_ADDR=" + tmp)); // IP address client
 	this->_cgiEnv.push_back(Utils::stoa("REMOTE_HOST=" + tmp)); // IP adress client again
-	if (getsockname(*reinterpret_cast <int *> (this->_masterSocketInfo.masterSocket), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
+	if (getsockname(this->_masterSocketInfo.masterSocket, reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
 		throw(Error::getSockNameException());
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
 		throw(Error::getNameInfoException());
@@ -114,12 +114,13 @@ bool	HttpResponse::processRequest(Parser &config)
 {
 	//TODO:	 comparer contenu headers avec .conf si all ok, ex: si method de request sur uri allow sur par .conf, etc....
 	//TODO: REMOVE THE TESTS
-	std::cout << "Process request info"<< std::endl;
-	std::cout << this->_masterSocketInfo.masterPort << std::endl;
-	std::cout << getHeader("Host") << std::endl;
-	std::cout << this->_ctrlData[1] << std::endl;
+//	std::cout << "Process request info"<< std::endl;
+//	std::cout << this->_masterSocketInfo.masterPort << std::endl;
+//	std::cout << getHeader("Host") << std::endl;
+//	std::cout << this->_ctrlData[1] << std::endl;
 	//TODO: ----------------------------------------------------------------------------------------------------------------
 	this->_config = config.getServerConfig(getHeader("Host"), std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
+//    std::cout << this->_config.at("root").size() << std::endl;
 	return true;
 }
 
@@ -159,7 +160,8 @@ std::string const HttpResponse::fullResponse(char *path, std::string const & bod
     response += "Last-Modified: " + Utils::getTime(fileInfos.st_mtime) + "\r\n";
     response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
     response += "Accept-Ranges: bytes\r\n";
-    response += "Connection: " + getHeader("Connection") == "Keep-Alive" ? "Keep-Alive\r\n" : "close\r\n";
+    response += "Connection: ";
+    response += getHeader("Connection") == "keep-alive" ? "keep-alive\r\n" : "close\r\n";
     if (infos.first == 405) // 405 Method not allowed
     {
         response += "Allow: ";
@@ -198,7 +200,7 @@ std::string const HttpResponse::methodGetHandler()
     if (this->_ctrlData[1].back() == '/')
         this->_ctrlData[1] += "index.html";
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
-    fullPath.insert(fullPath.begin(), '.');
+    //fullPath.insert(fullPath.begin(), '.');
     int fd = open(fullPath.c_str(), O_RDONLY);
     if (fd == -1)
         return ("file not find");
@@ -215,7 +217,7 @@ std::string const HttpResponse::methodGetHandler()
         if (size == -1)
             return ("error read");
     }
-    return this->fullResponse(Utils::stoa(fullPath), body, std::make_pair<int, std::string>(0, "OK"));
+    return this->fullResponse(Utils::stoa(fullPath), body, std::make_pair<int, std::string>(200, "OK"));
 }
 
 std::string const HttpResponse::methodPostHandler()

@@ -53,7 +53,9 @@ bool	HttpRequest::parseRequest()
 	std::string pre;
 	std::string::size_type pos;
 
-	if (this->getRequest().empty())
+    std::cout << "request content: " << std::endl;
+	std::cout << this->getRequest() << std::endl;
+    if (this->getRequest().empty())
 		return false;
 	if ((pos = this->getRequest().find("\r\n\r\n")) == std::string::npos)
 		return false;

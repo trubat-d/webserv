@@ -19,6 +19,7 @@ Socket::Socket(std::vector<int> & port, Parser *config)
 	this->_configHead = config;
 	this->_hint.sin_family = AF_INET;
 	this->_hint.sin_addr.s_addr = htonl(INADDR_ANY);
+    std::cout << "vector port size: " << port.size() << std::endl;
 	for (size_t i = 0; i < port.size(); i++)
 	{
 		this->_socket.push_back(socket(AF_INET, SOCK_STREAM, 0));
@@ -29,6 +30,7 @@ Socket::Socket(std::vector<int> & port, Parser *config)
 			throw(Error::BindException());
 		if (listen(this->_socket.at(i), 1024))
 			throw(Error::BindException());
+        std::cout << "masterSocket " << this->_socket.at(i) << ": port= " << ntohs(this->_hint.sin_port) << std::endl;
 	}
 }
 
@@ -100,6 +102,7 @@ int	Socket::addSocket(int index)
 		throw(Error::KeventException()); //return (1);
 	this->_rcv.insert(std::pair<int, std::string>(newSocket, ""));
 	this->_snd.insert(std::pair<int, std::string>(newSocket, ""));
+    std::cout << "from masterSocket: " << this->_socket.at(index) << "on port: " << info->masterPort << ", new socket: " << newSocket << std::endl;
 	return (0);
 }
 
@@ -136,7 +139,7 @@ int	Socket::readSocket(struct kevent & socket)
 		if (kevent(this->getKqueue(), change, 2, NULL, 0, NULL) == -1)
 			throw(Error::KeventException()); //return (1);
 	}
-	//TODO: du code pour gerer separation entre 2 request a la suite
+	//TODO: du code pour gerer separation entre 2 request a la suite, donc clear le recupere et laisser le reste
 	return (0);
 }
 
@@ -144,19 +147,23 @@ int	Socket::processSocket(struct kevent & socket, map_it & it)
 {
 	HttpRequest		request(it->second);
 
-	this->_rcv.erase(it);
 	if (request.parseRequest())
 	{
 		HttpResponse	response(request, socket);
 		if (response.processRequest(*this->_configHead))
 		{
 			if ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
-				return 1;
+				return false;
 			it->second = response.generateResponse();
+            if (response.getHeader("Connection") != "keep-alive")
+                this->_rcv.erase(it);
 		}
+        else
+            it->second = "HTTP/1.1 418 I'm a teapot\r\n";
 		//TODO it->second = response.genereateError();
 	}
-	it->second = "HTTP/1.1 400 Bad Request\r\n";
+	else
+        it->second = "HTTP/1.1 400 Bad Request\r\n";
 	return 0;
 }
 
@@ -183,7 +190,8 @@ int	Socket::writeSocket(struct kevent & socket)
 	it->second.erase(0, length);
 	if (it->second.empty())
 	{
-		this->_snd.erase(it);
+		// TODO checker si keep-alive
+        this->_snd.erase(it); // && TODO close(static_cast <int> (socket.ident))
 		EV_SET(&socket, static_cast <int> (socket.ident), EVFILT_WRITE, EV_DELETE, 0, 0, socket.udata);
 		if (socket.udata)
 			delete reinterpret_cast<uDada *> (socket.udata);
@@ -208,7 +216,8 @@ int	Socket::run()
 		fcntl(this->_socket[j], F_SETFL, O_NONBLOCK);
 		EV_SET(&newSocket, this->_socket[j], EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
 		if (kevent(this->getKqueue(), &newSocket, 1, NULL, 0, NULL) == -1)
-			exit (1);https://code-with-me.global.jetbrains.com/PkkxBUsLWVPorAtNxiVclA#p=CL&fp=7EE4813ED49455294FE29FF95F4D1003581BF67BE42C33C98F9944B9592851BA
+			exit (1);
+        std::cout << "adding masterSocket: " << j << " to kevent" << std::endl;
 	}
 	while(true)
 	{

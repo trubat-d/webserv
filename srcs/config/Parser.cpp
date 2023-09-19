@@ -203,14 +203,14 @@ void Parser::deleteParsingTable(t_node *head)
 	delete head;
 }
 
-//
+
 //void Parser::configPrinter()
 //{
 //	print_config(*this->tree, 0);
 //}
-
-
-
+//
+//
+//
 //void Parser::print_config(t_node &head, int k)
 //{
 //	(void)head;

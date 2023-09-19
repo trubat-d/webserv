@@ -26,6 +26,10 @@
 #include <sys/stat.h>
 #include <time.h>
 
+typedef struct uData {
+    int masterSocket;
+    int masterPort;
+} uDada;
 
 #include "Utils.hpp"
 #include "ErrorHandler.hpp"

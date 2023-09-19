@@ -250,19 +250,18 @@ void Parser::getPorts(std::vector<std::string> &storage, t_node* last_loc)
 	{
 		std::cout << it->first << "with values : ";
 		for(size_t x = 0; x < it->second.size(); x++)
-		{
 			std::cout << it->second[x] << " ";
-		}
 		std::cout << std::endl;
 	}
 	//TODO: REMOVE (ONLY FOR TESTS) ^^^^^^
-	for(size_t i = 0; i < last_loc->config.at("listen").size(); i++)
-	{
-		if(std::find(storage.begin(), storage.end(), last_loc->config.at("listen")[i]) != storage.end())
-		{
-			storage.push_back(last_loc->config.at("listen")[i]);
-		}
-	}
+    if(last_loc->config.find("listen") != last_loc->config.end())
+    {
+        for(size_t i = 0; i < last_loc->config.at("listen").size(); i++)
+        {
+            if(std::find(storage.begin(), storage.end(), last_loc->config.at("listen")[i]) != storage.end())
+                storage.push_back(last_loc->config.at("listen")[i]);
+        }
+    }
 	for (size_t i = 0; i < last_loc->branches.size(); i++)
 	{
 		getPorts(storage, last_loc->branches[i]);

@@ -6,11 +6,6 @@
 typedef std::map<std::string, std::vector<std::string> > t_conf_map;
 class Parser;
 
-typedef struct uData {
-	int masterSocket;
-	int masterPort;
-} uDada;
-
 class Socket {
 
 	typedef std::map<int, std::string>::iterator 	map_it;

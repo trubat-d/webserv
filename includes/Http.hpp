@@ -75,7 +75,7 @@ private:
 	std::string 										_ctrlData[3]; //[0] = GET ; [1] = /path ; [2] = HTTP 1.1
 	std::map<std::string, std::string>					_headers;
 	std::string											_body;
-	t_conf_map											*_config;
+	t_conf_map											_config;
 	std::vector<char *>							        _cgiEnv;
 	uDada												_masterSocketInfo;
 };

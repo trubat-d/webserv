@@ -38,7 +38,7 @@ HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
 	this->_cgiEnv.push_back(Utils::stoa("SERVER_PROTOCOL=" + this->_ctrlData[2]));
 	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
 	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_NAME=" + this->_ctrlData[1])); // path relative to DOCUMENT_ROOT
-	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + _config["root"][0] + this->_ctrlData[1])); // full path
+	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
 	if (getsockname(static_cast <int> (socket.ident), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
 		throw(Error::getSockNameException());
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
@@ -119,7 +119,7 @@ bool	HttpResponse::processRequest(Parser &config)
 	std::cout << getHeader("Host") << std::endl;
 	std::cout << this->_ctrlData[1] << std::endl;
 	//TODO: ----------------------------------------------------------------------------------------------------------------
-	this->_config = new t_conf_map(config.getServerConfig(getHeader("Host"), std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]));
+	this->_config = config.getServerConfig(getHeader("Host"), std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
 	return true;
 }
 
@@ -231,19 +231,17 @@ std::string const HttpResponse::methodDeleteHandler()
 std::string const HttpResponse::notCorrectMethodHandler()
 {
     std::string         response;
-    struct stat         fileInfos = {};
+    //struct stat         fileInfos = {};
 
     response ="HTTP/1.1 405 Method not allowed\r\n";
     response +="Data: " + Utils::getTime(0) + "\r\n";
     response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
     response += "Connection: " + getHeader("Connection") == "Keep-Alive" ? "Keep-Alive\r\n" : "close\r\n";
-    if (infos.first == 405) // 405 Method not allowed
-    {
-        response += "Allow: ";
-        for (vec_it it = this->_config["allow"].begin(); it != this->_config["allow"].end(); it++)
-            response += *it + " ";
-        response += "\r\n";
-    }
+    //if (infos.first == 405) // 405 Method not allowed
+    response += "Allow: ";
+    for (vec_it it = this->_config["allow"].begin(); it != this->_config["allow"].end(); it++)
+        response += *it + " ";
+    response += "\r\n";
     response += "\r\n";
     return response;
 }

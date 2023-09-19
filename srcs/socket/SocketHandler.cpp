@@ -227,6 +227,3 @@ int	Socket::run()
 		//TODO: arreter exception quand une erreur de read ou write, laisser tourner le serveur
 	}
 }
-
-
-//std::string temp = "HTTP/1.1 200 OK\r\nDate: Thu, 20 Jul 2023 16:36:30 GMT\r\nServer: Apache/2.2.14 (Win32)\r\nLast-Modified: Wed, 22 Jul 2009 19:15:56 GMT\r\nContent-Length: 52\nContent-Type: text/html\r\nConnection: Closed\r\n\r\n<html>\n<body>\n<h1>Hello, World!</h1>\n</body>\n</html>";

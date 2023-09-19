@@ -113,6 +113,7 @@ std::string HttpResponse::getHeader(std::string const & key) const
 bool	HttpResponse::processRequest() const
 {
 	//TODO:	 comparer contenu headers avec .conf si all ok, ex: si method de request sur uri allow sur par .conf, etc....
+
 	return true; //1) checker le control data
 }
 

@@ -7,8 +7,7 @@ SRC			=	./srcs/cgi/CGIHandler.cpp \
 				./srcs/error/ErrorHandler.cpp \
 				./srcs/http/RequestHandler.cpp ./srcs/http/ResponseHandler.cpp \
 				./srcs/socket/SocketHandler.cpp \
-				./srcs/utils/utils1.cpp \
-				main.cpp
+				./srcs/utils/utils1.cpp
 
 
 INCLUDES	= ./includes/

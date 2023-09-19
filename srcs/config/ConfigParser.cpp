@@ -1,5 +1,5 @@
 #include "Includer.hpp"
-
+//
 //int main(int ac, char ** av)
 //{
 //	try
@@ -20,11 +20,12 @@
 //				buffer.push_back(temp);
 //			}
 //			config_parser.tree_config(buffer);
-//			config_parser.configPrinter();
+////			config_parser.configPrinter();
 //			std::string name = "example.com";
 //			std::string port = "580";
-//			std::string path = "/dawdawdawd";
-//			config_parser.getServerConfig(name, port, path);
+//			std::string path = "/kapouet/trob";
+//			std::map<std::string, std::vector<std::string> > serv_cfg = config_parser.getServerConfig(name, port, path);
+//			config_parser.print_config(serv_cfg);
 //			file.close();
 //			if (file.fail())
 //				return 1;

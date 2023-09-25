@@ -14,7 +14,7 @@ Socket::Socket()
 		throw(Error::BindException());
 }
 
-Socket::Socket(std::vector<int> & port, Parser *config)
+Socket::Socket(std::vector<int> port, Parser *config)
 {
 	this->_configHead = config;
 	this->_hint.sin_family = AF_INET;
@@ -28,10 +28,21 @@ Socket::Socket(std::vector<int> & port, Parser *config)
 		this->_hint.sin_port = htons(port.at(i));
 		if (bind(this->_socket.at(i), reinterpret_cast <struct sockaddr *> (&this->_hint),sizeof(this->_hint)) < 0)
 			throw(Error::BindException());
-		if (listen(this->_socket.at(i), 1024))
+		if (listen(this->_socket.at(i), getWorkerConnections()))
 			throw(Error::BindException());
         std::cout << "masterSocket " << this->_socket.at(i) << ": port= " << ntohs(this->_hint.sin_port) << std::endl;
 	}
+}
+
+int Socket::getWorkerConnections()
+{
+    if(!this->_configHead)
+        return 0;
+    std::vector<std::string> event = this->_configHead->getEvent("worker_connections");
+    if(event.size() != 1)
+        return 0;
+    else
+        return Utils::vecStoI(event)[0];
 }
 
 Socket::Socket(Socket const & instance): _socket(instance.getSocket()) {}

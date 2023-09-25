@@ -9,10 +9,8 @@ char *Utils::concatToCharset(std::string &str1, std::string &str2)
 std::vector<int> Utils::vecStoI(std::vector<std::string> input)
 {
 	std::vector<int> result;
-    std::cout << "input size: " << input.size() << std::endl;
 	for(size_t i = 0; i < input.size(); i++)
 	{
-        std::cout << "input is : " << input[i] << std::endl;
 		std::stringstream strm(input[i]);
 		int x = 0;
 		strm >> x;

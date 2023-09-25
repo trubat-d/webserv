@@ -36,9 +36,9 @@ HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_METHOD=" + this->_ctrlData[0])); // method in meta data
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_URI=" + getHeader("Host") + this->_ctrlData[1])); // full path, meta data + host
 	this->_cgiEnv.push_back(Utils::stoa("SERVER_PROTOCOL=" + this->_ctrlData[2]));
-	//this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
+	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
 	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_NAME=" + this->_ctrlData[1])); // path relative to DOCUMENT_ROOT
-	//this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
+	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
 	if (getsockname(static_cast <int> (socket.ident), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
 		throw(Error::getSockNameException());
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
@@ -112,15 +112,38 @@ std::string HttpResponse::getHeader(std::string const & key) const
 
 bool	HttpResponse::processRequest(Parser &config)
 {
-	//TODO:	 comparer contenu headers avec .conf si all ok, ex: si method de request sur uri allow sur par .conf, etc....
-	//TODO: REMOVE THE TESTS
-//	std::cout << "Process request info"<< std::endl;
-//	std::cout << this->_masterSocketInfo.masterPort << std::endl;
-//	std::cout << getHeader("Host") << std::endl;
-//	std::cout << this->_ctrlData[1] << std::endl;
-	//TODO: ----------------------------------------------------------------------------------------------------------------
 	this->_config = config.getServerConfig(getHeader("Host"), std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
-//    std::cout << this->_config.at("root").size() << std::endl;
+//    if(this->_config.find("deny") != this->_config.end() && !this->_config.at("deny").empty())
+//    {
+//        if(std::find(this->_config.at("deny").begin(), this->_config.at("deny").end(),this->_ctrlData[0]) != this->_config.at("deny").end())
+//        {
+//            return false;
+//        }
+//    }
+//    //ROOT IS MANDATORY0
+//    if(this->_config.find("root") == this->_config.end())
+//        return false;
+//    else
+//    {
+//        char dir[256];
+//        if (!getcwd(dir, 256) || this->_config.at("root").size() != 1)
+//            return false;
+//        char * temp = strcat(dir, this->_config.at("root")[0].c_str());
+//        struct stat statbuf;
+//        stat(temp, &statbuf);
+//        if(!S_ISDIR(statbuf.st_mode))
+//            return false;
+//    }
+//    //check the size of the body size versus the allowed size
+//    if(this->_config.find("client_max_body_size") != this->_config.end() && this->_config.at("client_max_body_size").size() == 1)
+//    {
+//        if(!validateBodySize(this->_config.at("client_max_body_size")[0]))
+//            return false;
+//    }
+//    else
+//    {
+//        return false;
+//    }
 	return true;
 }
 
@@ -155,7 +178,7 @@ std::string const HttpResponse::fullResponse(char *path, std::string const & bod
     (void) stat(path, &fileInfos);
     response ="HTTP/1.1 " + Utils::itos(infos.first) + " " + infos.second + "\r\n";
     response +="Data: " + Utils::getTime(0) + "\r\n";
-    response += "Content-Type: text/html; charset=UTF-8\r\n";
+    response += "Content-Type: text/html; charset=UTF-8\r\n"; //TODO define type from .[ex]
     response += "Content-Length: " + Utils::itos(static_cast<int>(fileInfos.st_size)) + "\r\n";
     response += "Last-Modified: " + Utils::getTime(fileInfos.st_mtime) + "\r\n";
     response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
@@ -220,16 +243,6 @@ std::string const HttpResponse::methodGetHandler()
     return this->fullResponse(Utils::stoa(fullPath), body, std::make_pair<int, std::string>(200, "OK"));
 }
 
-std::string const HttpResponse::methodPostHandler()
-{
-	return "merde";
-}
-
-std::string const HttpResponse::methodDeleteHandler()
-{
-	return "merde";
-}
-
 std::string const HttpResponse::notCorrectMethodHandler()
 {
     std::string         response;
@@ -238,8 +251,8 @@ std::string const HttpResponse::notCorrectMethodHandler()
     response ="HTTP/1.1 405 Method not allowed\r\n";
     response +="Data: " + Utils::getTime(0) + "\r\n";
     response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
-    response += "Connection: " + getHeader("Connection") == "Keep-Alive" ? "Keep-Alive\r\n" : "close\r\n";
-    //if (infos.first == 405) // 405 Method not allowed
+    response += "Connection: ";
+    response += getHeader("Connection") == "Keep-Alive" ? "Keep-Alive\r\n" : "close\r\n";
     response += "Allow: ";
     for (vec_it it = this->_config["allow"].begin(); it != this->_config["allow"].end(); it++)
         response += *it + " ";
@@ -262,9 +275,10 @@ std::string const HttpResponse::cgiHandler()
 		dup2(fd[1], STDOUT_FILENO);
 		close(fd[0]);
 		close(fd[1]);
-		std::string tmp("tmp");
-		char * args[2] = {const_cast<char *>(tmp.c_str()), NULL};
-		if (execve("TODO", args, reinterpret_cast<char *const *>(this->_cgiEnv.data())) == -1)
+		char * filePath = Utils::stoa(this->_config["root"][0] + this->_ctrlData[1]);
+        char * arg = this->_body.empty() ? NULL : Utils::stoa(this->_body);
+        char * args[3] = { filePath, arg, NULL};
+		if (execve(filePath, args, reinterpret_cast<char *const *>(this->_cgiEnv.data())) == -1)
 			exit(-1);
 		exit(0);
 	}
@@ -289,15 +303,10 @@ std::string const HttpResponse::cgiHandler()
 
 std::string HttpResponse::generateResponse()
 {
-	std::string	response;
-
 	if (this->_ctrlData[0] == "GET")
-		response = this->methodGetHandler();
-	else if (this->_ctrlData[0] == "POST")
-		response = this->methodPostHandler();
-	else if (this->_ctrlData[0] == "DELETE")
-		response = this->methodDeleteHandler();
+		return this->methodGetHandler();
+	else if (this->_ctrlData[0] == "POST" || this->_ctrlData[0] == "DELETE")
+		return this->cgiHandler();
     else
-        response = this->notCorrectMethodHandler();
-	return response;
+        return this->notCorrectMethodHandler();
 }

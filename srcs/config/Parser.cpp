@@ -203,6 +203,31 @@ void Parser::deleteParsingTable(t_node *head)
 	delete head;
 }
 
+std::vector<std::string> Parser::getEvent(std::string event)
+{
+    std::vector<std::string> ret;
+    t_node *main;
+    if(this->tree->branches.empty())
+        return (ret);
+    for(size_t i = 0; i < this->tree->branches.size(); i++)
+    {
+        if(this->tree->branches[i]->title == "events")
+        {
+            main = this->tree->branches[i];
+        }
+    }
+    if(main->config.empty())
+        return ret;
+    for(size_t i = 0; i < main->config.size(); i++)
+    {
+        if(main->config.find(event) != main->config.end())
+        {
+            return main->config.at(event);
+        }
+    }
+    return ret;
+}
+
 
 //void Parser::configPrinter()
 //{

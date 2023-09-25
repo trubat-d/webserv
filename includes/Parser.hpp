@@ -43,6 +43,7 @@ public:
 	void getPorts(std::vector<std::string> & storage, t_node* last_loc);
 	t_node *getHead();
 	bool method_error_checker(t_node &head) const;
+    std::vector<std::string> getEvent(std::string event);
 private:
 	std::vector<std::string> *config_options;
 	t_node *tree;

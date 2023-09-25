@@ -10,10 +10,7 @@ int main(int ac, char **av)
 		Parser config_parser(av[1]);
 		std::vector<std::string> storage;
 		config_parser.getPorts(storage, config_parser.getHead());
-		std::vector<int> int_storage = Utils::vecStoI(storage);
-        std::cout << "Starting Server with : " << int_storage[0] << std::endl;
-
-		Socket webServerSocket(int_storage, &config_parser);
+		Socket webServerSocket(Utils::vecStoI(storage), &config_parser);
 		webServerSocket.run();
 	} catch (std::exception &err)
 	{

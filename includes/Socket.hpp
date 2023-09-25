@@ -13,7 +13,7 @@ class Socket {
 public:
 
 	Socket();
-	Socket(std::vector<int> & port, Parser *config);
+	Socket(std::vector<int> port, Parser *config);
 	Socket(Socket const & instance);
 	~Socket();
 
@@ -29,7 +29,7 @@ public:
 	int	readSocket(struct kevent & socket);
 	int processSocket(struct kevent & socket, map_it & it);
 	int	writeSocket(struct kevent & socket);
-
+    int getWorkerConnections();
 private:
 
 	int 						_kq;

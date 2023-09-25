@@ -64,8 +64,6 @@ public:
 	std::string generateResponse();
 
 	std::string const methodGetHandler();
-	std::string const methodPostHandler();
-	std::string const methodDeleteHandler();
     std::string const notCorrectMethodHandler();
     std::string const fullResponse(char *path, std::string const & body, std::pair<int, std::string> infos);
 	std::string const cgiHandler();

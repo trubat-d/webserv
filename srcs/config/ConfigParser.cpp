@@ -236,6 +236,35 @@ void Parser::join_map(t_conf_map & map1, t_conf_map & map2) const
 	{
 		if(map1.find(it->first) == map1.end())
 		{
+
+            if(it->first == "allow")
+            {
+                if(map1.find("deny") != map1.end())
+                {
+                    for(size_t i = 0; i < it->second.size(); i++)
+                    {
+                        if(std::find(map1.at("deny").begin(), map1.at("deny").end(),it->second[i]) != map1.at("deny").end())
+                        {
+                            std::cout << "removed :" << it->second[i] << "from deny" << std::endl;
+                            std::remove(map1.at("deny").begin(), map1.at("deny").end(),it->second[i]);
+                        }
+                    }
+                }
+		    }
+            else if (it->first == "deny")
+            {
+                if(map1.find("allow") != map1.end())
+                {
+                    for(size_t i = 0; i < it->second.size(); i++)
+                    {
+                        if(std::find(map1.at("allow").begin(), map1.at("allow").end(),it->second[i]) != map1.at("allow").end())
+                        {
+                            std::cout << "removed :" << it->second[i] << "from allow" << std::endl;
+                            std::remove(map1.at("allow").begin(), map1.at("allow").end(),it->second[i]);
+                        }
+                    }
+                }
+            }
 			map1[it->first] = it->second;
 		}
 	}

@@ -36,9 +36,9 @@ HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_METHOD=" + this->_ctrlData[0])); // method in meta data
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_URI=" + getHeader("Host") + this->_ctrlData[1])); // full path, meta data + host
 	this->_cgiEnv.push_back(Utils::stoa("SERVER_PROTOCOL=" + this->_ctrlData[2]));
-	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
+//	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
 	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_NAME=" + this->_ctrlData[1])); // path relative to DOCUMENT_ROOT
-	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
+//	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
 	if (getsockname(static_cast <int> (socket.ident), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
 		throw(Error::getSockNameException());
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
@@ -226,11 +226,11 @@ std::string const HttpResponse::methodGetHandler()
     //fullPath.insert(fullPath.begin(), '.');
     int fd = open(fullPath.c_str(), O_RDONLY);
     if (fd == -1)
-        return ("file not find");
+        return ("404 Not Found");
     char buffer[1024];
     ssize_t size = read(fd, buffer, 1023);
     if (size == -1)
-        return ("error read");
+        return ("500 Internal Server Error");
     std::string body;
     while (size > 0)
     {
@@ -238,7 +238,7 @@ std::string const HttpResponse::methodGetHandler()
         body += buffer;
         size = read(fd, buffer, 1023);
         if (size == -1)
-            return ("error read");
+            return ("500 Internal Server Error");
     }
     return this->fullResponse(Utils::stoa(fullPath), body, std::make_pair<int, std::string>(200, "OK"));
 }
@@ -273,11 +273,16 @@ std::string const HttpResponse::cgiHandler()
 	if (!pid)
 	{
 		dup2(fd[1], STDOUT_FILENO);
+        if (!this->_body.empty())
+        {
+            if (write(1, this->_body.c_str(), this->_body.size()) == -1)
+                exit (-1);
+        }
 		close(fd[0]);
 		close(fd[1]);
 		char * filePath = Utils::stoa(this->_config["root"][0] + this->_ctrlData[1]);
-        char * arg = this->_body.empty() ? NULL : Utils::stoa(this->_body);
-        char * args[3] = { filePath, arg, NULL};
+        // TODO work to be done here
+        char * args[3] = { "todo", filePath, NULL};
 		if (execve(filePath, args, reinterpret_cast<char *const *>(this->_cgiEnv.data())) == -1)
 			exit(-1);
 		exit(0);
@@ -285,17 +290,17 @@ std::string const HttpResponse::cgiHandler()
 	close (fd[1]);
 	waitpid(pid, &status, 0);
 	if (status == -1)
-		return "error cgi";
+		return "502 Bad Gateway";
 	ssize_t size = read(fd[0], buffer, 1023);
 	if (size == -1)
-		return "error cgi";
+		return "502 Bad Gateway";
 	while (size > 0)
 	{
 		buffer[size] = 0;
 		response += buffer;
 		size = read(fd[0], buffer, 1023);
 		if (size == -1)
-			return "error cgi";
+			return "502 Bad Gateway";
 	}
 	close (fd[0]);
 	return response;

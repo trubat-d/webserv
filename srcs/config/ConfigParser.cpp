@@ -54,10 +54,11 @@ std::vector<std::string> *configOptionsGen()
 	config_options->push_back("allow");
 	config_options->push_back("deny");
 	config_options->push_back("index");
-	config_options->push_back("cgi");
 	config_options->push_back("return");
 	config_options->push_back("alias");
 	config_options->push_back("autoindex");
+	config_options->push_back("uri_max_size");
+	config_options->push_back("cgi");
 	return config_options;
 }
 

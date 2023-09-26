@@ -161,7 +161,8 @@ int	Socket::processSocket(struct kevent & socket, map_it & it)
 	if (request.parseRequest())
 	{
 		HttpResponse	response(request, socket);
-		if (response.processRequest(*this->_configHead))
+		std::pair<int, std::string> res = response.processRequest(*this->_configHead);
+		if (res.first == 200)
 		{
 			if ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
 				return false;
@@ -169,8 +170,8 @@ int	Socket::processSocket(struct kevent & socket, map_it & it)
             if (response.getHeader("Connection") != "keep-alive")
                 this->_rcv.erase(it);
 		}
-        else
-            it->second = "HTTP/1.1 418 I'm a teapot\r\n";
+		else
+			it->second = res.second;
 		//TODO it->second = response.genereateError();
 	}
 	else

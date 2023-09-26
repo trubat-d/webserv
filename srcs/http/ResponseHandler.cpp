@@ -36,9 +36,9 @@ HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_METHOD=" + this->_ctrlData[0])); // method in meta data
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_URI=" + getHeader("Host") + this->_ctrlData[1])); // full path, meta data + host
 	this->_cgiEnv.push_back(Utils::stoa("SERVER_PROTOCOL=" + this->_ctrlData[2]));
-	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
+//	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
 	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_NAME=" + this->_ctrlData[1])); // path relative to DOCUMENT_ROOT
-	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
+//	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
 	if (getsockname(static_cast <int> (socket.ident), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
 		throw(Error::getSockNameException());
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
@@ -110,41 +110,55 @@ std::string HttpResponse::getHeader(std::string const & key) const
 //	return (env);
 //}
 
-bool	HttpResponse::processRequest(Parser &config)
+std::pair<int, std::string>	HttpResponse::processRequest(Parser &config)
 {
 	this->_config = config.getServerConfig(getHeader("Host"), std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
-//    if(this->_config.find("deny") != this->_config.end() && !this->_config.at("deny").empty())
-//    {
-//        if(std::find(this->_config.at("deny").begin(), this->_config.at("deny").end(),this->_ctrlData[0]) != this->_config.at("deny").end())
-//        {
-//            return false;
-//        }
-//    }
-//    //ROOT IS MANDATORY0
-//    if(this->_config.find("root") == this->_config.end())
-//        return false;
-//    else
-//    {
-//        char dir[256];
-//        if (!getcwd(dir, 256) || this->_config.at("root").size() != 1)
-//            return false;
-//        char * temp = strcat(dir, this->_config.at("root")[0].c_str());
-//        struct stat statbuf;
-//        stat(temp, &statbuf);
-//        if(!S_ISDIR(statbuf.st_mode))
-//            return false;
-//    }
-//    //check the size of the body size versus the allowed size
-//    if(this->_config.find("client_max_body_size") != this->_config.end() && this->_config.at("client_max_body_size").size() == 1)
-//    {
-//        if(!validateBodySize(this->_config.at("client_max_body_size")[0]))
-//            return false;
-//    }
-//    else
-//    {
-//        return false;
-//    }
-	return true;
+    if(this->_config.find("deny") != this->_config.end() && !this->_config.at("deny").empty())
+    {
+        if(std::find(this->_config.at("deny").begin(), this->_config.at("deny").end(),this->_ctrlData[0]) != this->_config.at("deny").end())
+            return std::pair<int, std::string>(405, "HTTP/1.1 405 Method Not Allowed\r\n");
+    }
+	if(this->_ctrlData[1].size() > static_cast<size_t>(std::atol(this->_config.at("uri_max_size")[0].c_str())))
+		return std::pair<int, std::string>(414, "HTTP/1.1 414 URI Too Long\r\n");
+	if(this->_ctrlData[2] != "HTTP/1.1")
+		return std::pair<int, std::string>(505, "HTTP/1.1 505 HTTP Version Not Supported\r\n");
+	if(this->_ctrlData[0] == "POST")
+	{
+		if(getHeader("Content-Length") != NaV && this->_body.empty())
+			return std::pair<int, std::string>(100, "HTTP/1.1 100 Continue\r\n");
+		else if(getHeader("Content-Length") == NaV && !this->_body.empty())
+			return std::pair<int, std::string>(411, "HTTP/1.1 411 Length Required\r\n");
+	}
+	if(this->_ctrlData[0] != "DELETE" && this->_ctrlData[0] != "POST" && this->_ctrlData[0] != "GET")
+		return std::pair<int, std::string>(501, "HTTP/1.1 501 Not Implemented\r\n");
+//  ROOT IS MANDATORY0
+    if(this->_config.find("root") == this->_config.end())
+        return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
+    else
+    {
+        char dir[256] = {};
+        if (!getcwd(dir, 256) || this->_config.at("root").size() != 1)
+            return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
+		std::string temproot(this->_config.at("root")[0]);
+		if(!this->_config.at("root")[0].empty() && !this->_config.at("root")[0].compare(0,2,"./"))
+			temproot.erase(0,1);
+        char * temp = strcat(dir, temproot.c_str());
+        struct stat statbuf;
+        stat(temp, &statbuf);
+        if(!S_ISDIR(statbuf.st_mode))
+            return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
+    }
+
+	std::cout << this->_body << std::endl;
+//  check the size of the body size versus the allowed size
+    if(this->_config.find("client_max_body_size") != this->_config.end() && this->_config.at("client_max_body_size").size() == 1)
+    {
+        if(!validateBodySize(this->_config.at("client_max_body_size")[0]))
+            return std::pair<int, std::string>(413, "HTTP/1.1 413 Payload Too Large\r\n");
+    }
+	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0]));
+	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
+	return std::pair<int, std::string>(200, "HTTP/1.1 200 OK\r\n");
 }
 
 bool HttpResponse::validateBodySize(std::string &bodySize)
@@ -165,9 +179,9 @@ bool HttpResponse::validateBodySize(std::string &bodySize)
 		if(bodySize.empty() ||
 		   bodySize.find_first_not_of("0123456789", 0) != std::string::npos)
 			return false;
-		return this->_body.size() < static_cast<unsigned long>(std::atol(bodySize.c_str())) * 1000;
+		return std::atol(getHeader("Content-Length").c_str()) < std::atol(bodySize.c_str()) * 1000;
 	}
-	return this->_body.size() < static_cast<unsigned long>(std::atol(bodySize.c_str()));
+	return std::atol(getHeader("Content-Length").c_str()) < std::atol(bodySize.c_str());
 }
 
 std::string const HttpResponse::fullResponse(char *path, std::string const & body, std::pair<int, std::string> infos)

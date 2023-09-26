@@ -59,9 +59,9 @@ public:
 	std::string getHeader(std::string const & key) const;
 	//char 		**setEnv(struct kevent & socket);
 
-	bool		processRequest(Parser &config);
-	bool validateBodySize(std::string &bodySize);
-	std::string generateResponse();
+	std::pair<int, std::string>	processRequest(Parser &config);
+	bool						validateBodySize(std::string &bodySize);
+	std::string					generateResponse();
 
 	std::string const methodGetHandler();
     std::string const notCorrectMethodHandler();
@@ -70,7 +70,7 @@ public:
 
 private:
 
-	std::string 										_ctrlData[3]; //[0] = GET ; [1] = /path ; [2] = HTTP 1.1
+	std::string 										_ctrlData[3]; //[0] = GET ; [1] = /path ; [2] = HTTP/1.1
 	std::map<std::string, std::string>					_headers;
 	std::string											_body;
 	t_conf_map											_config;

@@ -190,8 +190,8 @@ std::string const HttpResponse::fullResponse(char *path, std::string const & bod
     struct stat         fileInfos = {};
 
     (void) stat(path, &fileInfos);
-    response ="HTTP/1.1 " + Utils::itos(infos.first) + " " + infos.second + "\r\n";
-    response +="Data: " + Utils::getTime(0) + "\r\n";
+    response = "HTTP/1.1 " + Utils::itos(infos.first) + " " + infos.second + "\r\n";
+    response += "Date: " + Utils::getTime(0) + "\r\n";
     response += "Content-Type: text/html; charset=UTF-8\r\n"; //TODO define type from .[ex]
     response += "Content-Length: " + Utils::itos(static_cast<int>(fileInfos.st_size)) + "\r\n";
     response += "Last-Modified: " + Utils::getTime(fileInfos.st_mtime) + "\r\n";
@@ -240,11 +240,11 @@ std::string const HttpResponse::methodGetHandler()
     //fullPath.insert(fullPath.begin(), '.');
     int fd = open(fullPath.c_str(), O_RDONLY);
     if (fd == -1)
-        return ("file not find");
+        return ("HTTP/1.1 404 Not Found\r\n");
     char buffer[1024];
     ssize_t size = read(fd, buffer, 1023);
     if (size == -1)
-        return ("error read");
+        return ("HTTP/1.1 500 Internal Server Error\r\n");
     std::string body;
     while (size > 0)
     {
@@ -252,9 +252,9 @@ std::string const HttpResponse::methodGetHandler()
         body += buffer;
         size = read(fd, buffer, 1023);
         if (size == -1)
-            return ("error read");
+            return ("HTTP/1.1 500 Internal Server Error\r\n");
     }
-    return this->fullResponse(Utils::stoa(fullPath), body, std::make_pair<int, std::string>(200, "OK"));
+    return this->fullResponse(Utils::stoa(fullPath), body, std::pair<int, std::string>(200, "OK"));
 }
 
 std::string const HttpResponse::notCorrectMethodHandler()
@@ -287,11 +287,16 @@ std::string const HttpResponse::cgiHandler()
 	if (!pid)
 	{
 		dup2(fd[1], STDOUT_FILENO);
+        if (!this->_body.empty())
+        {
+            if (write(1, this->_body.c_str(), this->_body.size()) == -1)
+                exit (-1);
+        }
 		close(fd[0]);
 		close(fd[1]);
 		char * filePath = Utils::stoa(this->_config["root"][0] + this->_ctrlData[1]);
-        char * arg = this->_body.empty() ? NULL : Utils::stoa(this->_body);
-        char * args[3] = { filePath, arg, NULL};
+        // TODO work to be done here
+        char * args[3] = { "todo", filePath, NULL};
 		if (execve(filePath, args, reinterpret_cast<char *const *>(this->_cgiEnv.data())) == -1)
 			exit(-1);
 		exit(0);
@@ -299,17 +304,17 @@ std::string const HttpResponse::cgiHandler()
 	close (fd[1]);
 	waitpid(pid, &status, 0);
 	if (status == -1)
-		return "error cgi";
+		return "502 Bad Gateway\r\n";
 	ssize_t size = read(fd[0], buffer, 1023);
 	if (size == -1)
-		return "error cgi";
+		return "502 Bad Gateway\r\n";
 	while (size > 0)
 	{
 		buffer[size] = 0;
 		response += buffer;
 		size = read(fd[0], buffer, 1023);
 		if (size == -1)
-			return "error cgi";
+			return "502 Bad Gateway\r\n";
 	}
 	close (fd[0]);
 	return response;

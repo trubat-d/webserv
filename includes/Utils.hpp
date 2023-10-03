@@ -12,8 +12,9 @@ public:
     static std::string  getTime(time_t time);
 	static void fillMime();
 	static std::map<std::string, std::string> mimeTypes;
-
-	std::pair<int, std::string> fileToString(std::string & fullPath);
+    static std::string        fileToString(std::string & fullPath, std::pair<int, std::string> & infos);
+    static std::string         internalServerError(std::pair<int, std::string> & infos);
+    static std::string          basicHTML(std::pair<int, std::string> const & infos);
     template<typename T>
     static std::string itos(T value)
     {

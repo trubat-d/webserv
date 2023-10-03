@@ -2,7 +2,7 @@
 
 HttpResponse::HttpResponse() {}
 
-HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
+HttpResponse:: HttpResponse(HttpRequest const & instance, struct kevent & socket)
 {
 	std::string	tmp;
 	std::stringstream ss;
@@ -184,13 +184,13 @@ bool HttpResponse::validateBodySize(std::string &bodySize)
 	return std::atol(getHeader("Content-Length").c_str()) < std::atol(bodySize.c_str());
 }
 
-std::string const HttpResponse::fullResponse(char *path, std::string const & body, std::pair<int, std::string> infos)
+std::string const HttpResponse::fullResponse(std::string const & path, std::string const & body, std::pair<int, std::string> & infos)
 {
     std::string         response;
     struct stat         fileInfos = {};
 
-    (void) stat(path, &fileInfos);
-    response = "HTTP/1.1 " + Utils::itos(infos.first) + " " + infos.second + "\r\n";
+    (void) stat(Utils::stoa(path), &fileInfos);
+    response = infos.second;
     response += "Date: " + Utils::getTime(0) + "\r\n";
     response += "Content-Type: "  + getMimeType(path) + "\r\n"; //TODO define type from .[ex]
     response += "Content-Length: " + Utils::itos(static_cast<int>(fileInfos.st_size)) + "\r\n";
@@ -213,9 +213,10 @@ std::string const HttpResponse::fullResponse(char *path, std::string const & bod
 
 std::string const HttpResponse::methodGetHandler()
 {
+    std::pair<int, std::string> status(200, "OK");
 	size_t 		pos = this->_ctrlData[1].find(".cgi");
 
-	//cig case
+	//cgi case
 	if (pos != std::string::npos)
 	{
 		if (pos + 4 != this->_ctrlData[1].size())
@@ -238,23 +239,15 @@ std::string const HttpResponse::methodGetHandler()
         this->_ctrlData[1] += "index.html";
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
     //fullPath.insert(fullPath.begin(), '.');
-    int fd = open(fullPath.c_str(), O_RDONLY);
-    if (fd == -1)
-        return ("HTTP/1.1 404 Not Found\r\n");
-    char buffer[1024];
-    ssize_t size = read(fd, buffer, 1023);
-    if (size == -1)
-        return ("HTTP/1.1 500 Internal Server Error\r\n");
-    std::string body;
-    while (size > 0)
+    //test path
+    int fd = open(Utils::stoa(fullPath), O_RDONLY);
+    if (fd != -1)
     {
-        buffer[size] = 0;
-        body += buffer;
-        size = read(fd, buffer, 1023);
-        if (size == -1)
-            return ("HTTP/1.1 500 Internal Server Error\r\n");
+        close (fd);
+        return this->fullResponse(Utils::stoa(fullPath), Utils::fileToString(fullPath, status), status);
     }
-    return this->fullResponse(Utils::stoa(fullPath), body, std::pair<int, std::string>(200, "OK"));
+    else
+        return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found"));
 }
 
 std::string const HttpResponse::getMimeType(std::string path)
@@ -265,23 +258,23 @@ std::string const HttpResponse::getMimeType(std::string path)
 	return temp;
 }
 
-std::string const HttpResponse::notCorrectMethodHandler()
-{
-    std::string         response;
-    //struct stat         fileInfos = {};
-
-    response ="HTTP/1.1 405 Method not allowed\r\n";
-    response +="Data: " + Utils::getTime(0) + "\r\n";
-    response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
-    response += "Connection: ";
-    response += getHeader("Connection") == "Keep-Alive" ? "Keep-Alive\r\n" : "close\r\n";
-    response += "Allow: ";
-    for (vec_it it = this->_config["allow"].begin(); it != this->_config["allow"].end(); it++)
-        response += *it + " ";
-    response += "\r\n";
-    response += "\r\n";
-    return response;
-}
+//std::string const HttpResponse::notCorrectMethodHandler()
+//{
+//    std::string         response;
+//    //struct stat         fileInfos = {};
+//
+//    response ="HTTP/1.1 405 Method not allowed\r\n";
+//    response +="Data: " + Utils::getTime(0) + "\r\n";
+//    response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
+//    response += "Connection: ";
+//    response += getHeader("Connection") == "Keep-Alive" ? "Keep-Alive\r\n" : "close\r\n";
+//    response += "Allow: ";
+//    for (vec_it it = this->_config["allow"].begin(); it != this->_config["allow"].end(); it++)
+//        response += *it + " ";
+//    response += "\r\n";
+//    response += "\r\n";
+//    return response;
+//}
 
 std::string const HttpResponse::cgiHandler()
 {
@@ -328,12 +321,24 @@ std::string const HttpResponse::cgiHandler()
 	return response;
 }
 
-std::string HttpResponse::generateResponse()
+std::string HttpResponse::generateResponse(std::pair<int, std::string> res)
 {
-	if (this->_ctrlData[0] == "GET")
-		return this->methodGetHandler();
-	else if (this->_ctrlData[0] == "POST" || this->_ctrlData[0] == "DELETE")
-		return this->cgiHandler();
+    std::string path;
+
+	if (res.first == 200)
+    {
+        if (this->_ctrlData[0] == "GET")
+            return this->methodGetHandler();
+        else if (this->_ctrlData[0] == "POST" || this->_ctrlData[0] == "DELETE")
+            return this->cgiHandler();
+    }
     else
-        return this->notCorrectMethodHandler();
+    {
+        std::string translate = Utils::itos(res.first);
+        std::vector<std::string>::iterator where = std::find(this->_config.at("error_page").begin(), this->_config.at("error_page").end(),translate);
+        if (where != this->_config.at("error_page").end())
+            path = *(where+1);
+        return this->fullResponse(path, Utils::fileToString(path, res), res);
+    }
 }
+

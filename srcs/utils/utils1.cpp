@@ -35,3 +35,40 @@ std::string Utils::getTime(time_t time)
     std::string tmp(buffer);
     return tmp;
 }
+
+std::string  Utils::fileToString(std::string & fullPath, std::pair<int, std::string> & infos)
+{
+    if (fullPath.empty())
+        return basicHTML(infos);
+    int fd = open(fullPath.c_str(), O_RDONLY);
+    if (fd == -1)
+        return basicHTML(infos);
+    char buffer[1024];
+    ssize_t size = read(fd, buffer, 1023);
+    if (size == -1)
+        return internalServerError(infos);
+    std::string body;
+    while (size > 0)
+    {
+        buffer[size] = 0;
+        body += buffer;
+        size = read(fd, buffer, 1023);
+        if (size == -1)
+            return internalServerError(infos);
+    }
+    if (close(fd) == -1)
+        return internalServerError(infos);
+    return body;
+}
+
+std::string Utils::internalServerError(std::pair<int, std::string> & infos)
+{
+    infos.first = 500;
+    infos.second = "HTTP/1.1 500 Internal Server Error";
+    return "";
+}
+
+std::string Utils::basicHTML(std::pair<int, std::string> const & infos)
+{
+    return "<!DOCTYPE html>\n<html>\n<head>\n<title>" + Utils::itos<int>(infos.first) + "</title>\n</head>\n<body>\n<p>" + infos.second+ "</p>\n</body>\n</html>";
+}

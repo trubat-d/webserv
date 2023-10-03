@@ -10,7 +10,9 @@ public:
 	static char *       concatToCharset(std::string &str1, std::string &str2);
     static char *       stoa(std::string const & str);
     static std::string  getTime(time_t time);
-
+    static std::string        fileToString(std::string & fullPath, std::pair<int, std::string> & infos);
+    static std::string         internalServerError(std::pair<int, std::string> & infos);
+    static std::string          basicHTML(std::pair<int, std::string> const & infos);
     template<typename T>
     static std::string itos(T value)
     {

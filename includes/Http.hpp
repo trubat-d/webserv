@@ -10,8 +10,8 @@ class HttpRequest {
 public:
 
 	HttpRequest();
-	HttpRequest(std::string const & request);
-	HttpRequest(HttpRequest const & instance);
+	HttpRequest(std::string & request);
+	HttpRequest(HttpRequest & instance);
 	~HttpRequest();
 
 	HttpRequest &	operator=(HttpRequest const & instance);
@@ -32,8 +32,7 @@ public:
 
 private:
 
-	std::string 						_request;
-
+	std::string					         _request;
 	std::string 						_ctrlData;
 	std::map<std::string, std::string>	_headers;
 	std::string 						_body;
@@ -61,11 +60,11 @@ public:
 
 	std::pair<int, std::string>	processRequest(Parser &config);
 	bool						validateBodySize(std::string &bodySize);
-	std::string					generateResponse();
+	std::string					generateResponse(std::pair<int, std::string> res);
 
 	std::string const methodGetHandler();
     std::string const notCorrectMethodHandler();
-    std::string const fullResponse(char *path, std::string const & body, std::pair<int, std::string> infos);
+    std::string const fullResponse(std::string const & path, std::string const & body, std::pair<int, std::string> & infos);
 	std::string const cgiHandler();
 
 private:
@@ -76,6 +75,7 @@ private:
 	t_conf_map											_config;
 	std::vector<char *>							        _cgiEnv;
 	uDada												_masterSocketInfo;
+    std::string                                         _response;
 };
 
 #endif

@@ -1,1 +1,10 @@
 .DS_STORE
+test.cpp
+test2.cpp
+test3.cpp
+WebServer
+a.out.dSYM
+main.cpp
+*.o
+.idea/
+webserverHelp.rtf

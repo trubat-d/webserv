@@ -36,8 +36,8 @@ public:
 	void    addSocket(int index);
 
 	void    readSocket(struct kevent & socket);
-    int     parseSocket(std::string & socket, std::string & sndRequest);
-	int     processSocket(struct kevent & socket, std::string & request, std::string & response);
+    int     parseSocket(std::string & socket, std::string & sndRequest, int length);
+	int     processSocket(struct kevent & socket, std::string & request, std::string & response, ssize_t length);
 
 	void     writeSocket(struct kevent & socket);
     int     getWorkerConnections();

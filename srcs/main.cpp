@@ -11,6 +11,7 @@ int main(int ac, char **av)
 		std::vector<std::string> storage;
 		config_parser.getPorts(storage, config_parser.getHead());
 		Socket webServerSocket(Utils::vecStoI(storage), &config_parser);
+		Utils::fillMime();
 		webServerSocket.run();
 	} catch (std::exception &err)
 	{

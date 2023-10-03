@@ -63,6 +63,7 @@ public:
 	bool						validateBodySize(std::string &bodySize);
 	std::string					generateResponse();
 
+	std::string const getMimeType(std::string path);
 	std::string const methodGetHandler();
     std::string const notCorrectMethodHandler();
     std::string const fullResponse(char *path, std::string const & body, std::pair<int, std::string> infos);

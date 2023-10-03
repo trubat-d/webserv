@@ -192,7 +192,7 @@ std::string const HttpResponse::fullResponse(char *path, std::string const & bod
     (void) stat(path, &fileInfos);
     response = "HTTP/1.1 " + Utils::itos(infos.first) + " " + infos.second + "\r\n";
     response += "Date: " + Utils::getTime(0) + "\r\n";
-    response += "Content-Type: text/html; charset=UTF-8\r\n"; //TODO define type from .[ex]
+    response += "Content-Type: "  + getMimeType(path) + "\r\n"; //TODO define type from .[ex]
     response += "Content-Length: " + Utils::itos(static_cast<int>(fileInfos.st_size)) + "\r\n";
     response += "Last-Modified: " + Utils::getTime(fileInfos.st_mtime) + "\r\n";
     response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
@@ -257,6 +257,14 @@ std::string const HttpResponse::methodGetHandler()
     return this->fullResponse(Utils::stoa(fullPath), body, std::pair<int, std::string>(200, "OK"));
 }
 
+std::string const HttpResponse::getMimeType(std::string path)
+{
+	if(path.find('.') == std::string::npos)
+		return "";
+	std::string const temp = Utils::mimeTypes.at(std::string(path.begin() + path.find_last_of(".", path.size()), path.end()));
+	return temp;
+}
+
 std::string const HttpResponse::notCorrectMethodHandler()
 {
     std::string         response;
@@ -294,11 +302,11 @@ std::string const HttpResponse::cgiHandler()
         }
 		close(fd[0]);
 		close(fd[1]);
-		char * filePath = Utils::stoa(this->_config["root"][0] + this->_ctrlData[1]);
+//		char * filePath = Utils::stoa(this->_config["root"][0] + this->_ctrlData[1]);
         // TODO work to be done here
-        char * args[3] = { "todo", filePath, NULL};
-		if (execve(filePath, args, reinterpret_cast<char *const *>(this->_cgiEnv.data())) == -1)
-			exit(-1);
+//        char * args[3] = { "todo", filePath, NULL};
+//		if (execve(filePath, args, reinterpret_cast<char *const *>(this->_cgiEnv.data())) == -1)
+//			exit(-1);
 		exit(0);
 	}
 	close (fd[1]);

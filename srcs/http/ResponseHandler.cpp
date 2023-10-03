@@ -140,7 +140,7 @@ std::string const Http::fullResponse(std::string const & path, std::string const
     (void) stat(Utils::stoa(path), &fileInfos);
     response = infos.second;
     response += "Date: " + Utils::getTime(0) + "\r\n";
-    response += "Content-Type: text/html; charset=UTF-8\r\n"; //TODO define type from .[ex]
+    response += "Content-Type: "  + getMimeType(path) + "\r\n"; //TODO define type from .[ex]
     response += "Content-Length: " + Utils::itos(static_cast<int>(fileInfos.st_size)) + "\r\n";
     response += "Last-Modified: " + Utils::getTime(fileInfos.st_mtime) + "\r\n";
     response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
@@ -198,6 +198,14 @@ std::string const Http::methodGetHandler()
         return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found"));
 }
 
+std::string const Http::getMimeType(std::string path)
+{
+    if(path.find('.') == std::string::npos)
+        return "";
+    std::string const temp = Utils::mimeTypes.at(std::string(path.begin() + path.find_last_of(".", path.size()), path.end()));
+    return temp;
+}
+
 //std::string const Http::notCorrectMethodHandler()
 //{
 //    std::string         response;
@@ -215,6 +223,8 @@ std::string const Http::methodGetHandler()
 //    response += "\r\n";
 //    return response;
 //}
+
+
 
 std::string const Http::cgiHandler()
 {

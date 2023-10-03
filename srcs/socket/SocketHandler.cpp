@@ -155,9 +155,11 @@ void	Socket::readSocket(struct kevent & socket)
     std::string tmp;
 
     //SI LU ASSEZ D'INFO POUR GENERER UNE REPONSE
+
     int parseValue = this->processSocket(socket, itRcv->second, itSnd->second);
 	if (parseValue != keepReading)
 	{
+
         EV_SET(&change[0], socket.ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, socket.udata);
         // SI PAS DE 2ND REQUEST ET TOUT LU SUR SOCKET
         if (itRcv->second.empty() && length < 2047)

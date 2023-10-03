@@ -40,7 +40,6 @@ public:
 	int     processSocket(struct kevent & socket, std::string & request, std::string & response);
 
 	void     writeSocket(struct kevent & socket);
-
     int     getWorkerConnections();
 
 private:

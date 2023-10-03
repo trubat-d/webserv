@@ -11,7 +11,6 @@ class Http {
     typedef std::map<std::string, std::string>::const_iterator  map_it;
 
 public:
-
 	Http();
 	Http(std::string & request, struct kevent & socket);
 	Http(const Http & instance);
@@ -33,6 +32,7 @@ public:
 	bool	parseRequest();
 
 	void	showData();
+
 ///////////////////////////////////////////////////////////////////////
 
 
@@ -50,6 +50,8 @@ public:
     std::string const notCorrectMethodHandler();
     std::string const fullResponse(std::string const & path, std::string const & body, std::pair<int, std::string> & infos);
     std::string const cgiHandler();
+    std::string const getMimeType(std::string path);
+
 ///////////////////////////////////////////////////////////////////////
 
 //ATTRIBUTE
@@ -66,7 +68,6 @@ private:
     t_conf_map		                    _config;
     std::vector<char *>		            _cgiEnv;
     uDada				                _masterSocketInfo;
-
 };
 ///////////////////////////////////////////////////////////////////////
 

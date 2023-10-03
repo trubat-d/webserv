@@ -1,72 +1,99 @@
 #include "Http.hpp"
 
-HttpRequest::HttpRequest() {}
-HttpRequest::HttpRequest(const std::string & request): _request(request) {}
-HttpRequest::HttpRequest(const HttpRequest & instance): _headers(instance._headers) {}
-HttpRequest::~HttpRequest() {}
+Http::Http() {} /*_request((std::string &) "")*/
 
-HttpRequest &	HttpRequest::operator=(const HttpRequest &instance)
+Http::Http(std::string & request, struct kevent & socket): _request(request)
 {
-	if (this != &instance)
-		this->_headers = instance._headers;
-	return *this;
+    this->_masterSocketInfo = * reinterpret_cast<uDada *>(socket.udata);
+}
+
+Http::Http(const Http & instance)
+{
+    *this = instance;
+}
+
+Http::~Http() {}
+
+Http &	Http::operator=(const Http &instance)
+{
+    if (this == &instance)
+        return *this;
+    this->_request = instance._request;
+    this->_response = instance._response;
+    for (int i = 0; i < 3; i++)
+        this->_ctrlData[i] = instance._ctrlData[i];
+    this->_headers = instance._headers;
+    this->_body = instance._body;
+    this->_cgiEnv = instance._cgiEnv;
+    this->_config = instance._config;
+    this->_masterSocketInfo = instance._masterSocketInfo;
+    return *this;
 }
 
 ///////////////////////////////////GETTERS/////////////////////////////////////////////
 
-std::string const &	HttpRequest::getRequest() const
+std::string const &	Http::getRequest() const
 {
 	return this->_request;
 }
 
-std::string const &	HttpRequest::getCtrlData() const
+std::string *	Http::getCtrlData()
 {
 	return this->_ctrlData;
 }
 
-std::string const &	HttpRequest::getBody() const
+std::string const &	Http::getBody() const
 {
 	return this->_body;
 }
 
-std::map<std::string, std::string> const & HttpRequest::getHeaders() const
+std::map<std::string, std::string> const & Http::getHeaders() const
 {
 	return this->_headers;
 }
 
 ///////////////////////////////////SETTERS//////////////////////////////////////////////
 
-void	HttpRequest::setControlData(std::string const & data)
+void	Http::setControlData(std::string const & data)
 {
-	this->_ctrlData = data;
+    std::stringstream ss;
+    ss << data;
+    for (int i = 0; i < 3; i++)
+        ss >> this->_ctrlData[i];
 }
 
-void	HttpRequest::setBody(std::string const & body)
+void	Http::setBody(std::string const & body)
 {
 	this->_body = body;
 }
 
 /////////////////////////////////PARSING//////////////////////////////////////////////////
 
-bool	HttpRequest::parseRequest()
+bool	Http::parseRequest()
 {
 	std::string pre;
 	std::string::size_type pos;
 
     std::cout << "request content: " << std::endl;
 	std::cout << this->getRequest() << std::endl;
+    //CHECK ERREUR
     if (this->getRequest().empty())
 		return false;
 	if ((pos = this->getRequest().find("\r\n\r\n")) == std::string::npos)
 		return false;
+
+    //RECUPERE LE BODY
 	if (pos + 3 != this->getRequest().size())
 	{
 		this->setBody(this->getRequest().substr(pos + 4, this->getRequest().size() - pos - 4));
 		this->_request.erase(pos + 4, this->getRequest().size() - pos - 3);
 	}
+    //RECUPERE LA CONTROL DATA
 	pos = this->getRequest().find("\r\n");
 	this->setControlData(this->getRequest().substr(0, pos));
 	this->_request.erase(0, pos + 2);
+
+    //RECUPERE LES HEADERS
 	while ((pos = this->getRequest().find("\r\n", 0)) != std::string::npos)
 	{
 		if (this->getRequest() == "\r\n\r\n" || this->getRequest() == "\r\n")
@@ -79,7 +106,8 @@ bool	HttpRequest::parseRequest()
 		else
 		{
 			this->_headers.clear();
-			this->_ctrlData.clear();
+            for (int i = 0; i < 3; i++)
+			    this->_ctrlData[i].clear();
 			this->_body.clear();
 			return false;
 		}
@@ -87,7 +115,7 @@ bool	HttpRequest::parseRequest()
 	return true;
 }
 
-//void	HttpRequest::showData()
+//void	Http::showData()
 //{
 //	std::cout << "test ctrl data: " << "[" << this->_ctrlData << "]" << std::endl;
 //	typedef std::map<std::string, std::string>::iterator it;

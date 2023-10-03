@@ -12,6 +12,13 @@ class Socket {
 
 public:
 
+    enum parseCase {
+        badRequest = 0,
+        methodNotAllowed = 1,
+        done = 2,
+        keepReading = 3,
+    };
+
 	Socket();
 	Socket(std::vector<int> port, Parser *config);
 	Socket(Socket const & instance);
@@ -24,12 +31,18 @@ public:
 	void				setKqueue();
 	int					isSocket(uintptr_t socket) const;
 
-	int run();
-	int	addSocket(int index);
-	int	readSocket(struct kevent & socket);
-	int processSocket(struct kevent & socket, map_it & it);
-	int	writeSocket(struct kevent & socket);
-    int getWorkerConnections();
+	int     run();
+
+	void    addSocket(int index);
+
+	void    readSocket(struct kevent & socket);
+    int     parseSocket(std::string & socket, std::string & sndRequest);
+	int     processSocket(struct kevent & socket, std::string & request, std::string & response);
+
+	void     writeSocket(struct kevent & socket);
+
+    int     getWorkerConnections();
+
 private:
 
 	int 						_kq;

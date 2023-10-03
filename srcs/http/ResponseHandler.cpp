@@ -1,8 +1,6 @@
 #include "Http.hpp"
 
-HttpResponse::HttpResponse() {}
-
-HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
+std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
 {
 	std::string	tmp;
 	std::stringstream ss;
@@ -11,12 +9,6 @@ HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
 	char host[NI_MAXHOST];
 	char service[NI_MAXSERV];
 
-	this->_masterSocketInfo = * reinterpret_cast<uDada *>(socket.udata);
-	ss << instance.getCtrlData();
-	for (int i = 0; i < 3; i++)
-		ss >> this->_ctrlData[i];
-	this->_headers = instance.getHeaders();
-	this->_body = instance.getBody();
 	this->_cgiEnv.push_back(Utils::stoa("AUTH_TYPE=" + getHeader("Authorization")));
 	this->_cgiEnv.push_back(Utils::stoa("CONTENT_LENGTH=" + getHeader("Content-Length")));
 	this->_cgiEnv.push_back(Utils::stoa("CONTENT_TYPE=" + getHeader("Content-Type")));
@@ -36,49 +28,30 @@ HttpResponse::HttpResponse(HttpRequest const & instance, struct kevent & socket)
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_METHOD=" + this->_ctrlData[0])); // method in meta data
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_URI=" + getHeader("Host") + this->_ctrlData[1])); // full path, meta data + host
 	this->_cgiEnv.push_back(Utils::stoa("SERVER_PROTOCOL=" + this->_ctrlData[2]));
-//	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
+	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
 	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_NAME=" + this->_ctrlData[1])); // path relative to DOCUMENT_ROOT
-//	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
+	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
 	if (getsockname(static_cast <int> (socket.ident), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
-		throw(Error::getSockNameException());
+        return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
-		throw(Error::getNameInfoException());
+        return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	tmp = host;
 	this->_cgiEnv.push_back(Utils::stoa("REMOTE_ADDR=" + tmp)); // IP address client
 	this->_cgiEnv.push_back(Utils::stoa("REMOTE_HOST=" + tmp)); // IP adress client again
 	if (getsockname(this->_masterSocketInfo.masterSocket, reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
-		throw(Error::getSockNameException());
+        return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
-		throw(Error::getNameInfoException());
+        return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	tmp = host;
 	this->_cgiEnv.push_back(Utils::stoa("SERVER_NAME=" + tmp)); // server hostname or IP address
 	ss.clear();
 	ss << this->_masterSocketInfo.masterPort;
 	ss >> tmp;
 	this->_cgiEnv.push_back(Utils::stoa("SERVER_PORT=" + tmp)); // port on host running
+    return std::pair<int, std::string>(200, "HTTP/1.1 200 OK\r\n");
 }
 
-HttpResponse::~HttpResponse() {}
-
-HttpResponse::HttpResponse(const HttpResponse &instance)
-{
-	*this = instance;
-}
-
-HttpResponse &	HttpResponse::operator=(const HttpResponse &instance)
-{
-	if (this == &instance)
-		return *this;
-	for (int i = 0; i < 3; i++)
-		this->_ctrlData[i] = instance._ctrlData[i];
-	this->_body = instance._body;
-	this->_headers = instance._headers;
-	this->_cgiEnv = instance._cgiEnv;
-    this->_masterSocketInfo = instance._masterSocketInfo;
-	return *this;
-}
-
-std::string HttpResponse::getHeader(std::string const & key) const
+std::string Http::getHeader(std::string const & key) const
 {
 	map_it it = _headers.find( key);
 	if (it != _headers.end())
@@ -87,30 +60,7 @@ std::string HttpResponse::getHeader(std::string const & key) const
 		return NaV;
 }
 
-//char **		HttpResponse::setEnv(struct kevent & socket)
-//{
-//	//cgiEnv.data() fait pareil ....
-//	size_t	size = _cgiEnv.size();
-//	size_t 	tot;
-//	char **env = new char * [size];
-//
-//	if (!env)
-//		return NULL;
-//	for (size_t i = 0; i < size; i++)
-//	{
-//		env[i] = new char [_cgiEnv[i].size() + 1];
-//		if (!env[i])
-//		{
-//			//free_tab(env, i);
-//			return NULL;
-//		}
-//		tot = _cgiEnv[i].copy(env[i], _cgiEnv[i].size(), 0);
-//		env[i][tot] = '\0';
-//	}
-//	return (env);
-//}
-
-std::pair<int, std::string>	HttpResponse::processRequest(Parser &config)
+std::pair<int, std::string>	Http::processRequest(Parser &config)
 {
 	this->_config = config.getServerConfig(getHeader("Host"), std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
     if(this->_config.find("deny") != this->_config.end() && !this->_config.at("deny").empty())
@@ -156,12 +106,10 @@ std::pair<int, std::string>	HttpResponse::processRequest(Parser &config)
         if(!validateBodySize(this->_config.at("client_max_body_size")[0]))
             return std::pair<int, std::string>(413, "HTTP/1.1 413 Payload Too Large\r\n");
     }
-	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0]));
-	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
 	return std::pair<int, std::string>(200, "HTTP/1.1 200 OK\r\n");
 }
 
-bool HttpResponse::validateBodySize(std::string &bodySize)
+bool Http::validateBodySize(std::string &bodySize)
 {
 	if (bodySize.empty())
 		return false;
@@ -184,13 +132,13 @@ bool HttpResponse::validateBodySize(std::string &bodySize)
 	return std::atol(getHeader("Content-Length").c_str()) < std::atol(bodySize.c_str());
 }
 
-std::string const HttpResponse::fullResponse(char *path, std::string const & body, std::pair<int, std::string> infos)
+std::string const Http::fullResponse(std::string const & path, std::string const & body, std::pair<int, std::string> & infos)
 {
     std::string         response;
     struct stat         fileInfos = {};
 
-    (void) stat(path, &fileInfos);
-    response = "HTTP/1.1 " + Utils::itos(infos.first) + " " + infos.second + "\r\n";
+    (void) stat(Utils::stoa(path), &fileInfos);
+    response = infos.second;
     response += "Date: " + Utils::getTime(0) + "\r\n";
     response += "Content-Type: text/html; charset=UTF-8\r\n"; //TODO define type from .[ex]
     response += "Content-Length: " + Utils::itos(static_cast<int>(fileInfos.st_size)) + "\r\n";
@@ -211,11 +159,12 @@ std::string const HttpResponse::fullResponse(char *path, std::string const & bod
     return response;
 }
 
-std::string const HttpResponse::methodGetHandler()
+std::string const Http::methodGetHandler()
 {
+    std::pair<int, std::string> status(200, "HTTP/1.1 200 OK\r\n");
 	size_t 		pos = this->_ctrlData[1].find(".cgi");
 
-	//cig case
+	//cgi case
 	if (pos != std::string::npos)
 	{
 		if (pos + 4 != this->_ctrlData[1].size())
@@ -238,44 +187,36 @@ std::string const HttpResponse::methodGetHandler()
         this->_ctrlData[1] += "index.html";
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
     //fullPath.insert(fullPath.begin(), '.');
-    int fd = open(fullPath.c_str(), O_RDONLY);
-    if (fd == -1)
-        return ("HTTP/1.1 404 Not Found\r\n");
-    char buffer[1024];
-    ssize_t size = read(fd, buffer, 1023);
-    if (size == -1)
-        return ("HTTP/1.1 500 Internal Server Error\r\n");
-    std::string body;
-    while (size > 0)
+    //test path
+    int fd = open(Utils::stoa(fullPath), O_RDONLY);
+    if (fd != -1)
     {
-        buffer[size] = 0;
-        body += buffer;
-        size = read(fd, buffer, 1023);
-        if (size == -1)
-            return ("HTTP/1.1 500 Internal Server Error\r\n");
+        close (fd);
+        return this->fullResponse(Utils::stoa(fullPath), Utils::fileToString(fullPath, status), status);
     }
-    return this->fullResponse(Utils::stoa(fullPath), body, std::pair<int, std::string>(200, "OK"));
+    else
+        return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found"));
 }
 
-std::string const HttpResponse::notCorrectMethodHandler()
-{
-    std::string         response;
-    //struct stat         fileInfos = {};
+//std::string const Http::notCorrectMethodHandler()
+//{
+//    std::string         response;
+//    //struct stat         fileInfos = {};
+//
+//    response ="HTTP/1.1 405 Method not allowed\r\n";
+//    response +="Data: " + Utils::getTime(0) + "\r\n";
+//    response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
+//    response += "Connection: ";
+//    response += getHeader("Connection") == "Keep-Alive" ? "Keep-Alive\r\n" : "close\r\n";
+//    response += "Allow: ";
+//    for (vec_it it = this->_config["allow"].begin(); it != this->_config["allow"].end(); it++)
+//        response += *it + " ";
+//    response += "\r\n";
+//    response += "\r\n";
+//    return response;
+//}
 
-    response ="HTTP/1.1 405 Method not allowed\r\n";
-    response +="Data: " + Utils::getTime(0) + "\r\n";
-    response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
-    response += "Connection: ";
-    response += getHeader("Connection") == "Keep-Alive" ? "Keep-Alive\r\n" : "close\r\n";
-    response += "Allow: ";
-    for (vec_it it = this->_config["allow"].begin(); it != this->_config["allow"].end(); it++)
-        response += *it + " ";
-    response += "\r\n";
-    response += "\r\n";
-    return response;
-}
-
-std::string const HttpResponse::cgiHandler()
+std::string const Http::cgiHandler()
 {
 	int 		fd[2];
 	int			status;
@@ -294,11 +235,11 @@ std::string const HttpResponse::cgiHandler()
         }
 		close(fd[0]);
 		close(fd[1]);
-		char * filePath = Utils::stoa(this->_config["root"][0] + this->_ctrlData[1]);
+//		char * filePath = Utils::stoa(this->_config["root"][0] + this->_ctrlData[1]);
         // TODO work to be done here
-        char * args[3] = { "todo", filePath, NULL};
-		if (execve(filePath, args, reinterpret_cast<char *const *>(this->_cgiEnv.data())) == -1)
-			exit(-1);
+//        char * args[3] = { "todo", filePath, NULL};
+//		if (execve(filePath, args, reinterpret_cast<char *const *>(this->_cgiEnv.data())) == -1)
+//			exit(-1);
 		exit(0);
 	}
 	close (fd[1]);
@@ -320,12 +261,31 @@ std::string const HttpResponse::cgiHandler()
 	return response;
 }
 
-std::string HttpResponse::generateResponse()
+std::string Http::generateResponse(std::pair<int, std::string> res)
 {
-	if (this->_ctrlData[0] == "GET")
-		return this->methodGetHandler();
-	else if (this->_ctrlData[0] == "POST" || this->_ctrlData[0] == "DELETE")
-		return this->cgiHandler();
+    std::string path;
+
+	if (res.first == 200)
+    {
+        if (this->_ctrlData[0] == "GET")
+            return this->methodGetHandler();
+        else if (this->_ctrlData[0] == "POST" || this->_ctrlData[0] == "DELETE")
+            return this->cgiHandler();
+    }
     else
-        return this->notCorrectMethodHandler();
+    {
+        if(!this->_config.empty())
+        {
+            std::string translate = Utils::itos(res.first);
+            if(this->_config.find("error_page") != this->_config.end())
+            {
+                std::vector<std::string>::iterator where = std::find(this->_config.at("error_page").begin(), this->_config.at("error_page").end(),translate);
+                if (where != this->_config.at("error_page").end())
+                    path = *(where+1);
+            }
+        }
+        return this->fullResponse(path, Utils::fileToString(path, res), res);
+    }
+    return "";
 }
+

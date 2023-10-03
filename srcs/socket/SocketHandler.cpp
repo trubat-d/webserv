@@ -89,7 +89,7 @@ int		Socket::isSocket(uintptr_t socket) const
 }
 /////////////////////////////////////////////////////////////
 
-int	Socket::addSocket(int index)
+void	Socket::addSocket(int index)
 {
 	int				newSocket;
 	uDada *			info;
@@ -100,30 +100,32 @@ int	Socket::addSocket(int index)
 
 	newSocket = accept(this->_socket.at(index), NULL, NULL);
 	if (newSocket < 0)
-		throw(Error::AcceptException()); //return (1);
+		return ;
 	if (fcntl(newSocket, F_SETFL, O_NONBLOCK) == -1)
-		throw(Error::FcntlException()); //return (1);
+		return ;
 	info = new uDada;
 	info->masterSocket = this->_socket.at(index);
 	if (getsockname(this->_socket.at(index), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
-		throw(Error::getSockNameException());
+		return ;
 	info->masterPort = ntohs(sockAddr.sin_port);
 	EV_SET(&newClient, newSocket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, info);
-	if (kevent(this->getKqueue(), &newClient, 1, NULL, 0, NULL) == -1)
-		throw(Error::KeventException()); //return (1);
-	this->_rcv.insert(std::pair<int, std::string>(newSocket, ""));
-	this->_snd.insert(std::pair<int, std::string>(newSocket, ""));
-    std::cout << "from masterSocket: " << this->_socket.at(index) << "on port: " << info->masterPort << ", new socket: " << newSocket << std::endl;
-	return (0);
+	if (kevent(this->getKqueue(), &newClient, 1, NULL, 0, NULL) != -1)
+    {
+        this->_rcv.insert(std::pair<int, std::string>(newSocket, ""));
+	    this->_snd.insert(std::pair<int, std::string>(newSocket, ""));
+        std::cout << "from masterSocket: " << this->_socket.at(index) << "on port: " << info->masterPort << ", new socket: " << newSocket << std::endl;
+    }
+	return ;
 }
 
-int	Socket::readSocket(struct kevent & socket)
+void	Socket::readSocket(struct kevent & socket)
 {
-	map_it			it;
+	map_it			itRcv, itSnd;
 	ssize_t			length;
-	struct kevent	change[2];
-	char			buffer[2048];
+	struct kevent	change[2] = {};
+	char			buffer[2048] = {};
 
+    //SI ERREUR SUR LE SOCKET
 	if (socket.flags & EV_EOF)
 	{
 		this->_rcv.erase(this->_snd.find(static_cast <int> (socket.ident)));
@@ -131,86 +133,187 @@ int	Socket::readSocket(struct kevent & socket)
 		EV_SET(&change[0], socket.ident, EVFILT_READ, EV_DELETE, 0, 0, socket.udata);
 		socket.flags = EV_DELETE;
 		if (socket.udata)
-			delete reinterpret_cast<uData *> (socket.udata);
+        {
+            delete reinterpret_cast<uData *> (socket.udata);
+            socket.udata = NULL;
+        }
 		close(static_cast <int> (socket.ident));
-		return (kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL) == -1);
+		kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL);
+        return ;
 	}
-	if ((it = this->_rcv.find(static_cast <int> (socket.ident))) == this->_rcv.end())
-		return (1);
+
+    //RECUPERER DANS LES 2 MAPS LES STRING CORRESPONDANT AU SOCKET
+	if ((itRcv = this->_rcv.find(static_cast <int> (socket.ident))) == this->_rcv.end() || (itSnd = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
+		return ;//TODO GENERER UNE RESPONSE BASIC;
+
+    //LIRE LE SOCKET ET METTRE LE CONTENU DANS MAP RCV
 	if ((length = read(static_cast <int> (socket.ident), buffer, 2047)) == -1)
-		throw(Error::ReadException()); //return (1);
+		return ;//TODO GENERER UNE RESPONSE BASIC;
 	buffer[length] = 0;
 	std::string temp(buffer);
-	it->second += temp;
-	if(length < 2047)
+	itRcv->second += temp;
+    std::string tmp;
+
+    //SI LU ASSEZ D'INFO POUR GENERER UNE REPONSE
+    int parseValue = this->processSocket(socket, itRcv->second, itSnd->second);
+	if (parseValue != keepReading)
 	{
-		this->processSocket(socket, it);
-		EV_SET(&change[0], socket.ident, EVFILT_READ, EV_DELETE, 0, 0, socket.udata);
-		EV_SET(&change[1], socket.ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, socket.udata);
-		if (kevent(this->getKqueue(), change, 2, NULL, 0, NULL) == -1)
-			throw(Error::KeventException()); //return (1);
+        EV_SET(&change[0], socket.ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, socket.udata);
+        // SI PAS DE 2ND REQUEST ET TOUT LU SUR SOCKET
+        if (itRcv->second.empty() && length < 2047)
+        {
+            //ENLEVE EVENT DE READ DU SOCKET ET RAJOUTE EVENT DE WRITE DU SOCKET
+            EV_SET(&change[1], socket.ident, EVFILT_READ, EV_DELETE, 0, 0, socket.udata);
+            kevent(this->getKqueue(), change, 2, NULL, 0, NULL);
+        }
+        //RAJOUTE EVENT WRITE ET KEEP EVENT READ DU SOCKET
+        kevent(this->getKqueue(), change, 1, NULL, 0, NULL);
 	}
-	//TODO: du code pour gerer separation entre 2 request a la suite, donc clear le recupere et laisser le reste
-	return (0);
+    //TODO CREER UN TIMEOUT SI KEEP WAITING FOR INFO BUT NOTHING COMES
 }
 
-int	Socket::processSocket(struct kevent & socket, map_it & it)
+int    Socket::processSocket(struct kevent & socket, std::string & request, std::string & response)
 {
-	HttpRequest		request(it->second);
+    std::string                 tmp;
+    std::pair<int, std::string> res;
+    std::cout << "avant parseSocket: [" << request << "]" << std::endl << "[" << response << "]" << std::endl;
+    int                         parseValue = this->parseSocket(request, tmp);
+    Http                        client;
 
-	if (request.parseRequest())
-	{
-		HttpResponse	response(request, socket);
-		std::pair<int, std::string> res = response.processRequest(*this->_configHead);
-		if (res.first == 200)
-		{
-			if ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
-				return false;
-			it->second = response.generateResponse();
-            if (response.getHeader("Connection") != "keep-alive")
-                this->_rcv.erase(it);
-		}
-		else
-			it->second = res.second;
-		//TODO it->second = response.genereateError();
-	}
-	else
-        it->second = "HTTP/1.1 400 Bad Request\r\n";
-	return 0;
+    //SI LU ASSEZ D'INFO POUR GENERER UNE REPONSE
+    std::cout << "post parseSocket: [" << request << "]" << std::endl << "[" << response << "]" << std::endl;
+    if (parseValue == done)
+    {
+        client = Http(request,socket);
+        request = tmp;
+        //DEFINE CTR_DATA & HEADERS & BODY IF OK
+        if (client.parseRequest())
+        {
+            //DEFINE SI REQUEST OK WITH .CONF
+            res = client.processRequest(*this->_configHead);
+            //SET CGI ENV
+            if (res.first == 200)
+                res = client.setCGIEnv(socket);
+            response = client.generateResponse(res);
+            //TODO : mettre dans udata un bool pour connection: keep-alive, et le modifier en fonction de val de retour de res et value dans Header de base
+        }
+        else
+            response = client.generateResponse(std::pair<int, std::string> (400, "HTTP/1.1 400 Bad Request\r\n"));
+    }
+    //TODO we need a fucking function to create function without http config file, donc basic bitch response
+    else if (parseValue == badRequest)
+        response = client.generateResponse(std::pair<int, std::string> (400, "HTTP/1.1 400 Bad Request\r\n"));
+    else if (parseValue == methodNotAllowed)
+        response = client.generateResponse(std::pair<int, std::string> (500, "HTTP/1.1 500 Method Not Allowed\r\n"));
+    return parseValue;
 }
 
-int	Socket::writeSocket(struct kevent & socket)
+int     Socket::parseSocket(std::string & read, std::string & sndRequest)
+{
+    size_t          postCase = read.find("POST");
+    size_t          getCase = read.find("GET");
+    size_t          delCase = read.find("DELETE");
+
+    //si 1er request est GET ou DELETE
+    if (!getCase || !delCase)
+    {
+        size_t  endRequest = read.find("\r\n\r\n");
+        if (endRequest == std::string::npos)
+            return  keepReading;
+        //IF 2ND REQUEST RIGHT AFTER
+        if (endRequest + 3 != read.size())
+        {
+            sndRequest = read.substr(endRequest + 4);
+            read.erase(endRequest + 4);
+        }
+    }
+    //si 1er request est POST
+    else if (!postCase)
+    {
+        size_t cntLen = read.find("Content-Length: ");
+        //IF NO CONTENT-LENGTH
+        if (cntLen == std::string::npos)
+        {
+            //IF NO TRANSFER ENCODING
+            if (read.find("Transfer-Encoding: chunked\n\r")== std::string::npos)
+                return badRequest;
+            //IF TRANSFER ENCODING
+            size_t  endRequest = read.find("0\r\n\r\n");
+            if (endRequest == std::string::npos)
+                return keepReading;
+            //IF 2ND REQUEST RIGHT AFTER
+            if (endRequest + 4 != read.size())
+            {
+                sndRequest = read.substr(endRequest + 5);
+                read.erase(endRequest + 5);
+            }
+        }
+        //IF CONTENT-LENGTH-
+        else
+        {
+            size_t  startValue = read.find(":", cntLen);
+            size_t  endValue = read.find("\r\n", cntLen);
+            if (startValue == std::string::npos)
+                return badRequest;
+            size_t bodyLen = static_cast<unsigned long> (atol(read.substr(startValue + 2, endValue - (startValue + 2)).c_str()));
+            size_t endHeaders = read.find("\r\n\r\n");
+            //IF NO END OF HEADERS MARK
+            if (endHeaders == std::string::npos)
+                return badRequest;
+            //IF 2ND REQUEST RIGHT AFTER
+            if (endHeaders + 3 + bodyLen != read.size())
+            {
+                sndRequest = read.substr(endHeaders + 4 + bodyLen);
+                read.erase(endHeaders + 4 + bodyLen);
+            }
+        }
+    }
+    // PAS TROUVER METHODE
+    else
+        return methodNotAllowed;
+    return done;
+}
+
+
+void	Socket::writeSocket(struct kevent & socket)
 {
 	map_it	it;
 	ssize_t	length;
 
 	if (socket.flags & EV_EOF)
 	{
-		//    ?     this->_rcv.erase(this->_snd.find(static_cast <int> (socket.ident)));
+		this->_rcv.erase(this->_snd.find(static_cast <int> (socket.ident)));
 		this->_snd.erase(this->_snd.find(static_cast <int> (socket.ident)));
 		socket.flags = EV_DELETE;
 		if (socket.udata)
-			delete reinterpret_cast<uData *> (socket.udata);
+        {
+            delete reinterpret_cast<uData *> (socket.udata);
+            socket.udata = NULL;
+        }
 		close(static_cast <int> (socket.ident));
-		return (kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL) == -1);
+		kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL);
+        return ;
 	}
 	if ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
-		return 1;
+		return ; //TODO genere response error server
 	if ((length = write(static_cast <int> (socket.ident), it->second.data(), \
-	it->second.length() > 2047 ? 2047 : it->second.length())) == -1)
-		throw(Error::WriteException()); //return (1);
-	it->second.erase(0, length);
-	if (it->second.empty())
+	it->second.length() > 2047 ? 2047 : it->second.length())) != -1)
+	    it->second.erase(0, length);
+	if (it->second.empty() || length == -1)
 	{
-		// TODO checker si keep-alive
-        this->_snd.erase(it); // && TODO close(static_cast <int> (socket.ident))
+		// TODO checker si keep-alive, sinon close socket et erase dans map
+        //this->_rcv.erase(it);
+        this->_snd.erase(it);
 		EV_SET(&socket, static_cast <int> (socket.ident), EVFILT_WRITE, EV_DELETE, 0, 0, socket.udata);
 		if (socket.udata)
-			delete reinterpret_cast<uDada *> (socket.udata);
-		return (kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL) == -1 || \
-		close(static_cast <int> (socket.ident)) == -1);
+        {
+            delete reinterpret_cast<uDada *> (socket.udata);
+            socket.udata = NULL;
+        }
+		kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL);
+		close(static_cast <int> (socket.ident));
 	}
-	return (0);
+    // TODO: destroy rcv and close fd if connection close. always destroy snd
 }
 
 /////////////////////////////////////////////////////////////
@@ -231,7 +334,7 @@ int	Socket::run()
 			exit (1);
         std::cout << "adding masterSocket: " << j << " to kevent" << std::endl;
 	}
-	while(true)
+	while (true)
 	{
 		nbrRequests = kevent(this->getKqueue(), NULL, 0, events, 100, NULL);
 		if (nbrRequests < 0)
@@ -239,12 +342,24 @@ int	Socket::run()
 		for (int i = 0; i < nbrRequests; i++)
 		{
 			indexSocket = this->isSocket(events[i].ident);
-			if ((events[i].flags & EV_ERROR) || \
-				(indexSocket >= 0 && this->addSocket(indexSocket)) || \
-				(indexSocket == -1 && events[i].filter == EVFILT_READ && this->readSocket(events[i])) || \
-				(events[i].filter == EVFILT_WRITE && this->writeSocket(events[i])))
-				throw(Error::TcpException());
+			if (events[i].flags & EV_ERROR)
+            {
+                if (events[i].udata)
+                {
+                    delete reinterpret_cast<uDada *> (events[i].udata);
+                    events[i].udata = NULL;
+                }
+                this->_rcv.erase(this->_snd.find(static_cast <int> (events[i].ident)));
+                this->_snd.erase(this->_snd.find(static_cast <int> (events[i].ident)));
+                close(events[i].ident);
+                //TODO: destroy dans kqeue also
+            }
+            if (indexSocket >= 0)
+                this->addSocket(indexSocket);
+			else if (indexSocket == -1 && events[i].filter == EVFILT_READ )
+                this->readSocket(events[i]);
+			else if (indexSocket == -1 && events[i].filter == EVFILT_WRITE)
+                this->writeSocket(events[i]);
 		}
-		//TODO: arreter exception quand une erreur de read ou write, laisser tourner le serveur
 	}
 }

@@ -66,7 +66,7 @@ private:
 	std::string 						_body;
 
     t_conf_map		                    _config;
-    std::vector<const char *>		            _cgiEnv;
+    std::vector<std::string>		    _cgiEnv;
     uDada				                _masterSocketInfo;
 };
 ///////////////////////////////////////////////////////////////////////

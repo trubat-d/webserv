@@ -151,7 +151,7 @@ void	Socket::readSocket(struct kevent & socket)
 	itRcv->second += temp;
 
     //SI LU ASSEZ D'INFO POUR GENERER UNE REPONSE
-    int parseValue = this->processSocket(socket, itRcv->second, itSnd->second, length);
+    int parseValue = this->processSocket(socket, itRcv->second, itSnd->second);
 	if (parseValue != keepReading)
 	{
         EV_SET(&change[0], socket.ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, socket.udata);
@@ -168,11 +168,11 @@ void	Socket::readSocket(struct kevent & socket)
     //TODO CREER UN TIMEOUT SI KEEP WAITING FOR INFO BUT NOTHING COMES
 }
 
-int    Socket::processSocket(struct kevent & socket, std::string & request, std::string & response, ssize_t length)
+int    Socket::processSocket(struct kevent & socket, std::string & request, std::string & response)
 {
     std::string                 tmp;
     std::pair<int, std::string> res;
-    int                         parseValue = this->parseSocket(request, tmp, length);
+    int                         parseValue = this->parseSocket(request, tmp);
     Http                        client;
 
     //SI LU ASSEZ D'INFO POUR GENERER UNE REPONSE
@@ -204,7 +204,7 @@ int    Socket::processSocket(struct kevent & socket, std::string & request, std:
     return parseValue;
 }
 
-int     Socket::parseSocket(std::string & read, std::string & sndRequest, int length)
+int     Socket::parseSocket(std::string & read, std::string & sndRequest)
 {
     size_t          postCase = read.find("POST");
     size_t          getCase = read.find("GET");

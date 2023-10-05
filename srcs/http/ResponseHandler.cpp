@@ -25,12 +25,14 @@ std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
 	this->_cgiEnv.push_back(Utils::stoa("HTTP_COOKIE=" + getHeader("Cookie")));
 	this->_cgiEnv.push_back(Utils::stoa("REMOTE_IDENT=" + getHeader("Authorization")));
 	this->_cgiEnv.push_back(Utils::stoa("REMOTE_USER=" + getHeader("Authorization")));
+	this->_cgiEnv.push_back(Utils::stoa("REDIRECT_STATUS=CGI"));
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_METHOD=" + this->_ctrlData[0])); // method in meta data
 	this->_cgiEnv.push_back(Utils::stoa("REQUEST_URI=" + getHeader("Host") + this->_ctrlData[1])); // full path, meta data + host
 	this->_cgiEnv.push_back(Utils::stoa("SERVER_PROTOCOL=" + this->_ctrlData[2]));
 	this->_cgiEnv.push_back(Utils::stoa("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
 	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_NAME=" + this->_ctrlData[1])); // path relative to DOCUMENT_ROOT
-	this->_cgiEnv.push_back(Utils::stoa("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
+	this->_cgiEnv.push_back(const_cast<char *>(("SCRIPT_FILENAME=" + this->_config["root"][0].substr(0, this->_config["root"][0].size()-1) + this->_ctrlData[1]).c_str())); // full path
+//	this->_cgiEnv.push_back(const_cast<char *>("SCRIPT_FILENAME=./www/cgi.php"));
 	if (getsockname(static_cast <int> (socket.ident), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
         return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
@@ -233,6 +235,8 @@ std::string const Http::cgiHandler()
 	char		buffer[1024];
 	std::string	response;
 
+
+	std::cout << "ENTERED CGI HANDLER" << std::endl;
 	pipe(fd);
 	int pid = fork();
 	if (!pid)
@@ -240,16 +244,30 @@ std::string const Http::cgiHandler()
 		dup2(fd[1], STDOUT_FILENO);
         if (!this->_body.empty())
         {
-            if (write(1, this->_body.c_str(), this->_body.size()) == -1)
+            if (write(0, this->_body.c_str(), this->_body.size()) == -1)
+			{
+				std::cerr << "exited on write" << std::endl;
                 exit (-1);
+			}
         }
 		close(fd[0]);
 		close(fd[1]);
-//		char * filePath = Utils::stoa(this->_config["root"][0] + this->_ctrlData[1]);
+		size_t envSize = this->_cgiEnv.size();
+		char * envi[envSize + 1];
+		for(size_t i = 0; i < envSize; i++)
+		{
+			envi[i] = this->_cgiEnv[i];
+		}
+		envi[envSize] = nullptr;
+		std::string filePath = this->_config["root"][0].substr(0, this->_config["root"][0].size()-1) + this->_ctrlData[1];
         // TODO work to be done here
-//        char * args[3] = { "todo", filePath, NULL};
-//		if (execve(filePath, args, reinterpret_cast<char *const *>(this->_cgiEnv.data())) == -1)
-//			exit(-1);
+		std::string script = std::string("/System/Volumes/Data/mnt/sgoinfre/php-cgi");
+        char * args[3] = { const_cast<char*>(script.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
+		if (execve(const_cast<char *>(script.c_str()), args, envi) == -1)
+		{
+			std::cerr << "exited on execve with filepath = " << args[0]<< " + " << args[1] << std::endl;
+			exit(-1);
+		}
 		exit(0);
 	}
 	close (fd[1]);

@@ -128,7 +128,7 @@ void	Socket::readSocket(struct kevent & socket)
     //SI ERREUR SUR LE SOCKET
 	if (socket.flags & EV_EOF)
 	{
-		this->_rcv.erase(this->_snd.find(static_cast <int> (socket.ident)));
+//		this->_rcv.erase(this->_snd.find(static_cast <int> (socket.ident)));
 		this->_snd.erase(this->_snd.find(static_cast <int> (socket.ident)));
 		EV_SET(&change[0], socket.ident, EVFILT_READ, EV_DELETE, 0, 0, socket.udata);
 		socket.flags = EV_DELETE;
@@ -178,12 +178,11 @@ int    Socket::processSocket(struct kevent & socket, std::string & request, std:
 {
     std::string                 tmp;
     std::pair<int, std::string> res;
-    std::cout << "avant parseSocket: [" << request << "]" << std::endl << "[" << response << "]" << std::endl;
     int                         parseValue = this->parseSocket(request, tmp);
     Http                        client;
 
     //SI LU ASSEZ D'INFO POUR GENERER UNE REPONSE
-    std::cout << "post parseSocket: [" << request << "]" << std::endl << "[" << response << "]" << std::endl;
+    std::cout << request << std::endl;
     if (parseValue == done)
     {
         client = Http(request,socket);
@@ -192,6 +191,7 @@ int    Socket::processSocket(struct kevent & socket, std::string & request, std:
         if (client.parseRequest())
         {
             //DEFINE SI REQUEST OK WITH .CONF
+			std::cout << client.getBody() << std::endl;
             res = client.processRequest(*this->_configHead);
             //SET CGI ENV
             if (res.first == 200)
@@ -263,7 +263,7 @@ int     Socket::parseSocket(std::string & read, std::string & sndRequest)
             if (endHeaders == std::string::npos)
                 return badRequest;
             //IF 2ND REQUEST RIGHT AFTER
-            if (endHeaders + 3 + bodyLen != read.size())
+            if (endHeaders + 3 + bodyLen <= read.size())
             {
                 sndRequest = read.substr(endHeaders + 4 + bodyLen);
                 read.erase(endHeaders + 4 + bodyLen);

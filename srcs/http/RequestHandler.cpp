@@ -74,8 +74,6 @@ bool	Http::parseRequest()
 	std::string pre;
 	std::string::size_type pos;
 
-    std::cout << "request content: " << std::endl;
-	std::cout << this->getRequest() << std::endl;
     //CHECK ERREUR
     if (this->getRequest().empty())
 		return false;

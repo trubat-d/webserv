@@ -12,9 +12,8 @@ std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
 	this->_cgiEnv.push_back(("AUTH_TYPE=" + getHeader("Authorization")));
 	this->_cgiEnv.push_back(("CONTENT_LENGTH=" + getHeader("Content-Length")));
 	this->_cgiEnv.push_back(("CONTENT_TYPE=" + getHeader("Content-Type")));
-    tmp = "GATEWAY_INTERFACE=CGI/1.1";
-	this->_cgiEnv.push_back(tmp);
 	this->_cgiEnv.push_back("REDIRECT_STATUS=CGI");
+	this->_cgiEnv.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	this->_cgiEnv.push_back(("HTTP_USER_AGENT=" + getHeader("User-Agent")));
 	this->_cgiEnv.push_back(("HTTP_HOST=" + getHeader("Host")));
 	this->_cgiEnv.push_back(("HTTP_ACCEPT=" + getHeader("Accept")));
@@ -23,8 +22,7 @@ std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
 	this->_cgiEnv.push_back(("HTTP_CONNECTION=" + getHeader("Connection")));
 	this->_cgiEnv.push_back(("HTTP_REFERER=" + getHeader("Referer")));
 	this->_cgiEnv.push_back(("HTTP_USER_AGENT=" + getHeader("User-Agent")));
-    tmp = "SERVER_SOFTWARE=WebserverDeSesGrandsMorts/4.20.69";
-	this->_cgiEnv.push_back(tmp);
+	this->_cgiEnv.push_back("SERVER_SOFTWARE=WebserverDeSesGrandsMorts/4.20.69");
 	this->_cgiEnv.push_back(("HTTP_COOKIE=" + getHeader("Cookie")));
 	this->_cgiEnv.push_back(("REMOTE_IDENT=" + getHeader("Authorization")));
 	this->_cgiEnv.push_back(("REMOTE_USER=" + getHeader("Authorization")));

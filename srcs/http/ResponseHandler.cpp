@@ -12,6 +12,7 @@ std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
 	this->_cgiEnv.push_back(("AUTH_TYPE=" + getHeader("Authorization")));
 	this->_cgiEnv.push_back(("CONTENT_LENGTH=" + getHeader("Content-Length")));
 	this->_cgiEnv.push_back(("CONTENT_TYPE=" + getHeader("Content-Type")));
+	this->_cgiEnv.push_back("REDIRECT_STATUS=CGI");
 	this->_cgiEnv.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	this->_cgiEnv.push_back(("HTTP_USER_AGENT=" + getHeader("User-Agent")));
 	this->_cgiEnv.push_back(("HTTP_HOST=" + getHeader("Host")));
@@ -195,7 +196,7 @@ std::string const Http::methodGetHandler()
         return this->fullResponse(fullPath.c_str(), Utils::fileToString(fullPath, status), status);
     }
     else
-        return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found"));
+        return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found\r\n"));
 }
 
 std::string const Http::getMimeType(std::string path)
@@ -232,42 +233,73 @@ std::string const Http::cgiHandler()
 	int			status;
 	char		buffer[1024];
 	std::string	response;
+	int bodyPipe[2];
 
+
+	std::cout << "ENTERED CGI HANDLER" << std::endl;
+	pipe(bodyPipe);
 	pipe(fd);
+	if (!this->_body.empty())
+	{
+		std::cerr << "Write START \n" << std::endl;
+		if (write(bodyPipe[1], this->_body.c_str(), this->_body.size()) == -1)
+		{
+			exit (-1);
+		}
+		std::cerr << "Write END \n" << std::endl;
+	}
 	int pid = fork();
 	if (!pid)
 	{
-		dup2(fd[1], STDOUT_FILENO);
-        if (!this->_body.empty())
-        {
-            if (write(1, this->_body.c_str(), this->_body.size()) == -1)
-                exit (-1);
-        }
 		close(fd[0]);
+		close(bodyPipe[1]);
+		dup2(fd[1], STDOUT_FILENO);
+		dup2(bodyPipe[0], STDIN_FILENO);
 		close(fd[1]);
-//		char * filePath = (this->_config["root"][0] + this->_ctrlData[1]).c_str();
+		close(bodyPipe[0]);
+		size_t envSize = this->_cgiEnv.size();
+		char * envi[envSize + 1];
+		for(size_t i = 0; i < envSize; i++)
+			envi[i] = const_cast<char *>(this->_cgiEnv[i].c_str());
+		envi[envSize] = nullptr;
+		std::string filePath = this->_config["root"][0].substr(0, this->_config["root"][0].size()-1) + this->_ctrlData[1];
         // TODO work to be done here
-//        char * args[3] = { "todo", filePath, NULL};
-//		if (execve(filePath, args, reinterpret_cast<char *const *>(this->_cgiEnv.data())) == -1)
-//			exit(-1);
+		std::string script = std::string("/System/Volumes/Data/mnt/sgoinfre/php-cgi");
+		std::cerr << this->_body << std::endl;
+        char * args[3] = { const_cast<char*>(script.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
+		if (execve(const_cast<char *>(script.c_str()), args, envi) == -1)
+		{
+			std::cerr << "exited on execve with filepath = " << args[0] << " + " << args[1] << std::endl;
+			exit(-1);
+		}
 		exit(0);
 	}
 	close (fd[1]);
+	close(bodyPipe[0]);
+	close(bodyPipe[1]);
 	waitpid(pid, &status, 0);
 	if (status == -1)
 		return "502 Bad Gateway\r\n";
+//	sleep(1);
+//	kill(pid, SIGINT);
 	ssize_t size = read(fd[0], buffer, 1023);
+	response += buffer;
 	if (size == -1)
+	{
 		return "502 Bad Gateway\r\n";
-	while (size > 0)
+	}
+	while (size == 1023)
 	{
 		buffer[size] = 0;
 		response += buffer;
 		size = read(fd[0], buffer, 1023);
 		if (size == -1)
+		{
 			return "502 Bad Gateway\r\n";
+		}
 	}
 	close (fd[0]);
+	std::cout << "boug" << std::endl;
 	return response;
 }
 

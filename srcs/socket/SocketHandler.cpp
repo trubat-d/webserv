@@ -129,7 +129,6 @@ void	Socket::readSocket(struct kevent & socket)
     //SI ERREUR SUR LE SOCKET
 	if (socket.flags & EV_EOF)
         return (void) Utils::removeSocket(this->getKqueue(), &socket, 1, (int [1]){EVFILT_READ}, EV_DELETE, this->_rcv, this->_snd);
-
     //RECUPERER DANS LES 2 MAPS LES STRING CORRESPONDANT AU SOCKET
 	if ((itRcv = this->_rcv.find(static_cast <int> (socket.ident))) == this->_rcv.end() || (itSnd = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
     {
@@ -184,6 +183,7 @@ int    Socket::processSocket(struct kevent & socket, std::string & request, std:
         if (client.parseRequest())
         {
             //DEFINE SI REQUEST OK WITH .CONF
+			std::cout << client.getBody() << std::endl;
             res = client.processRequest(*this->_configHead);
             //SET CGI ENV
             if (res.first == 200)
@@ -281,6 +281,8 @@ void	Socket::writeSocket(struct kevent & socket)
 	if (socket.flags & EV_EOF || ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end()))
         return (void) Utils::removeSocket(this->getKqueue(), &socket, 2, (int [2]){EVFILT_READ, EVFILT_WRITE}, EV_DELETE, this->_rcv, this->_snd);
 
+//	std::cout << it->second << std::endl;
+	it->second = "HTTP/1.1 200 OK\r\n" + it->second;
     //WRITE INTO SOCKET
 	if ((length = write(static_cast <int> (socket.ident), it->second.data(), \
 	it->second.length() > 2047 ? 2047 : it->second.length())) != -1)

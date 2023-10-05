@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <csignal>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/event.h>

@@ -62,7 +62,7 @@ void Utils::fillMime()
 	mimeTypes[".jar"] = "application/java-archive";
 	mimeTypes[".jpg"] = "image/jpeg";
 	mimeTypes[".jpeg"] = "image/jpeg";
-	mimeTypes[".js"] = "text/javascript (Specifications: HTML and RFC 9239)";
+	mimeTypes[".js"] = "text/javascript";
 	mimeTypes[".json"] = "application/json";
 	mimeTypes[".jsonld"] = "application/ld+json";
 	mimeTypes[".mid"] = "audio/midi, audio/x-midi";
@@ -108,8 +108,8 @@ void Utils::fillMime()
 	mimeTypes[".xml"] = "application/xml";
 	mimeTypes[".xul"] = "application/vnd.mozilla.xul+xml";
 	mimeTypes[".zip"] = "application/zip";
-	mimeTypes[".3gp"] = "video/3gpp; audio/3gpp if it doesn't contain video";
-	mimeTypes[".3g2"] = "video/3gpp2; audio/3gpp2 if it doesn't contain video";
+	mimeTypes[".3gp"] = "video/3gpp";
+	mimeTypes[".3g2"] = "video/3gpp2";
 	mimeTypes[".7z"] = "application/x-7z-compressed";
 }
 
@@ -157,11 +157,11 @@ int        Utils::removeSocket(int kq, struct kevent * socket, int nfilter, int 
 
     for (int i = 0; i < nfilter; i++)
         EV_SET(&sockets[i], static_cast <int> (socket->ident), filter[i], flags, 0, 0, socket->udata);
-    if (socket->udata != NULL)
-    {
-        delete reinterpret_cast<uDada *> (socket->udata);
-        socket->udata = NULL;
-    }
+//    if (socket->udata != NULL)
+//    {
+//        delete reinterpret_cast<uDada *> (socket->udata);
+//        socket->udata = NULL;
+//    }
     tmp = kevent(kq, sockets, nfilter, NULL, 0, NULL);
     close(static_cast <int> (socket->ident));
     Utils::eraseMap(receive, static_cast <int> (socket->ident));

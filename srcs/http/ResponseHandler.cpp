@@ -13,7 +13,8 @@ std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
 	this->_cgiEnv.push_back(("CONTENT_LENGTH=" + getHeader("Content-Length")));
 	this->_cgiEnv.push_back(("CONTENT_TYPE=" + getHeader("Content-Type")));
     tmp = "GATEWAY_INTERFACE=CGI/1.1";
-	this->_cgiEnv.push_back(tmp.c_str());
+	this->_cgiEnv.push_back(tmp);
+	this->_cgiEnv.push_back("REDIRECT_STATUS=CGI");
 	this->_cgiEnv.push_back(("HTTP_USER_AGENT=" + getHeader("User-Agent")));
 	this->_cgiEnv.push_back(("HTTP_HOST=" + getHeader("Host")));
 	this->_cgiEnv.push_back(("HTTP_ACCEPT=" + getHeader("Accept")));
@@ -23,7 +24,7 @@ std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
 	this->_cgiEnv.push_back(("HTTP_REFERER=" + getHeader("Referer")));
 	this->_cgiEnv.push_back(("HTTP_USER_AGENT=" + getHeader("User-Agent")));
     tmp = "SERVER_SOFTWARE=WebserverDeSesGrandsMorts/4.20.69";
-	this->_cgiEnv.push_back(tmp.c_str());
+	this->_cgiEnv.push_back(tmp);
 	this->_cgiEnv.push_back(("HTTP_COOKIE=" + getHeader("Cookie")));
 	this->_cgiEnv.push_back(("REMOTE_IDENT=" + getHeader("Authorization")));
 	this->_cgiEnv.push_back(("REMOTE_USER=" + getHeader("Authorization")));
@@ -31,25 +32,25 @@ std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
 	this->_cgiEnv.push_back(("REQUEST_URI=" + getHeader("Host") + this->_ctrlData[1])); // full path, meta data + host
 	this->_cgiEnv.push_back(("SERVER_PROTOCOL=" + this->_ctrlData[2]));
 	this->_cgiEnv.push_back(("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
-	this->_cgiEnv.push_back(("SCRIPT_NAME=." + this->_ctrlData[1])); // path relative to DOCUMENT_ROOT
-	this->_cgiEnv.push_back(("SCRIPT_FILENAME=" + this->_config["root"][0].substr(0, this->_config["root"][0].size()-1) + this->_ctrlData[1]).c_str()); // full path
+	this->_cgiEnv.push_back(("SCRIPT_NAME=" + this->_ctrlData[1])); // path relative to DOCUMENT_ROOT
+	this->_cgiEnv.push_back(("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
 	if (getsockname(static_cast <int> (socket.ident), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
         return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
         return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	tmp = host;
-	this->_cgiEnv.push_back(("REMOTE_ADDR=" + tmp).c_str()); // IP address client
-	this->_cgiEnv.push_back(("REMOTE_HOST=" + tmp).c_str()); // IP adress client again
+	this->_cgiEnv.push_back(("REMOTE_ADDR=" + tmp)); // IP address client
+	this->_cgiEnv.push_back(("REMOTE_HOST=" + tmp)); // IP adress client again
 	if (getsockname(this->_masterSocketInfo.masterSocket, reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
         return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
         return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	tmp = host;
-	this->_cgiEnv.push_back(("SERVER_NAME=" + tmp).c_str()); // server hostname or IP address
+	this->_cgiEnv.push_back(("SERVER_NAME=" + tmp)); // server hostname or IP address
 	ss.clear();
 	ss << this->_masterSocketInfo.masterPort;
 	ss >> tmp;
-	this->_cgiEnv.push_back(("SERVER_PORT=" + tmp).c_str()); // port on host running
+	this->_cgiEnv.push_back(("SERVER_PORT=" + tmp)); // port on host running
     return std::pair<int, std::string>(200, "HTTP/1.1 200 OK\r\n");
 }
 
@@ -173,12 +174,12 @@ std::string const Http::methodGetHandler()
 		{
 			if ((pos = this->_ctrlData[1].find('?')) != std::string::npos)
 			{
-				this->_cgiEnv.push_back(("QUERY_STRING=" + this->_ctrlData[1].substr(pos + 1, _ctrlData[1].size() - pos - 1)).c_str());
+				this->_cgiEnv.push_back(("QUERY_STRING=" + this->_ctrlData[1].substr(pos + 1, _ctrlData[1].size() - pos - 1)));
 				_ctrlData[1].erase(pos, _ctrlData[1].size() - pos);
 			}
 			if ((pos = this->_ctrlData[1].find(".cgi/")) != std::string::npos)
 			{
-				this->_cgiEnv.push_back(("PATH_INFO=" + this->_ctrlData[1].substr(pos + 4, _ctrlData[1].size() - pos - 4)).c_str());
+				this->_cgiEnv.push_back(("PATH_INFO=" + this->_ctrlData[1].substr(pos + 4, _ctrlData[1].size() - pos - 4)));
 				this->_ctrlData[1].erase(pos + 4, _ctrlData[1].size() - pos - 4);
 			}
 			return this->cgiHandler();
@@ -197,7 +198,7 @@ std::string const Http::methodGetHandler()
         return this->fullResponse(fullPath.c_str(), Utils::fileToString(fullPath, status), status);
     }
     else
-        return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found"));
+        return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found\r\n"));
 }
 
 std::string const Http::getMimeType(std::string path)
@@ -234,59 +235,73 @@ std::string const Http::cgiHandler()
 	int			status;
 	char		buffer[1024];
 	std::string	response;
+	int bodyPipe[2];
 
 
 	std::cout << "ENTERED CGI HANDLER" << std::endl;
+	pipe(bodyPipe);
 	pipe(fd);
+	if (!this->_body.empty())
+	{
+		std::cerr << "Write START \n" << std::endl;
+		if (write(bodyPipe[1], this->_body.c_str(), this->_body.size()) == -1)
+		{
+			exit (-1);
+		}
+		std::cerr << "Write END \n" << std::endl;
+	}
 	int pid = fork();
 	if (!pid)
 	{
-		dup2(fd[1], STDOUT_FILENO);
-        if (!this->_body.empty())
-        {
-            if (write(0, this->_body.c_str(), this->_body.size()) == -1)
-			{
-				std::cerr << "exited on write" << std::endl;
-                exit (-1);
-			}
-        }
 		close(fd[0]);
+		close(bodyPipe[1]);
+		dup2(fd[1], STDOUT_FILENO);
+		dup2(bodyPipe[0], STDIN_FILENO);
 		close(fd[1]);
+		close(bodyPipe[0]);
 		size_t envSize = this->_cgiEnv.size();
 		char * envi[envSize + 1];
 		for(size_t i = 0; i < envSize; i++)
-		{
 			envi[i] = const_cast<char *>(this->_cgiEnv[i].c_str());
-			std::cerr << envi[i] << std::endl;
-		}
 		envi[envSize] = nullptr;
 		std::string filePath = this->_config["root"][0].substr(0, this->_config["root"][0].size()-1) + this->_ctrlData[1];
         // TODO work to be done here
 		std::string script = std::string("/System/Volumes/Data/mnt/sgoinfre/php-cgi");
+		std::cerr << this->_body << std::endl;
         char * args[3] = { const_cast<char*>(script.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
 		if (execve(const_cast<char *>(script.c_str()), args, envi) == -1)
 		{
-			std::cerr << "exited on execve with filepath = " << args[0]<< " + " << args[1] << std::endl;
+			std::cerr << "exited on execve with filepath = " << args[0] << " + " << args[1] << std::endl;
 			exit(-1);
 		}
 		exit(0);
 	}
 	close (fd[1]);
+	close(bodyPipe[0]);
+	close(bodyPipe[1]);
 	waitpid(pid, &status, 0);
 	if (status == -1)
 		return "502 Bad Gateway\r\n";
+//	sleep(1);
+//	kill(pid, SIGINT);
 	ssize_t size = read(fd[0], buffer, 1023);
+	response += buffer;
 	if (size == -1)
+	{
 		return "502 Bad Gateway\r\n";
-	while (size > 0)
+	}
+	while (size == 1023)
 	{
 		buffer[size] = 0;
 		response += buffer;
 		size = read(fd[0], buffer, 1023);
 		if (size == -1)
+		{
 			return "502 Bad Gateway\r\n";
+		}
 	}
 	close (fd[0]);
+	std::cout << "boug" << std::endl;
 	return response;
 }
 

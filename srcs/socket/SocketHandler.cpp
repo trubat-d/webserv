@@ -281,6 +281,8 @@ void	Socket::writeSocket(struct kevent & socket)
 	if (socket.flags & EV_EOF || ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end()))
         return (void) Utils::removeSocket(this->getKqueue(), &socket, 2, (int [2]){EVFILT_READ, EVFILT_WRITE}, EV_DELETE, this->_rcv, this->_snd);
 
+//	std::cout << it->second << std::endl;
+	it->second = "HTTP/1.1 200 OK\r\n" + it->second;
     //WRITE INTO SOCKET
 	if ((length = write(static_cast <int> (socket.ident), it->second.data(), \
 	it->second.length() > 2047 ? 2047 : it->second.length())) != -1)

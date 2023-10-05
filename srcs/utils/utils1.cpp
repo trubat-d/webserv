@@ -158,11 +158,11 @@ int        Utils::removeSocket(int kq, struct kevent * socket, int nfilter, int 
     for (int i = 0; i < nfilter; i++)
         EV_SET(&sockets[i], static_cast <int> (socket->ident), filter[i], flags, 0, 0, socket[i].udata);
     tmp = kevent(kq, sockets, nfilter, NULL, 0, NULL);
-    if (socket->udata)
-    {
-        delete reinterpret_cast<uDada *> (socket->udata);
-        socket->udata = NULL;
-    }
+//    if (socket->udata)
+//    {
+//        delete reinterpret_cast<uDada *> (socket->udata);
+//        socket->udata = NULL;
+//    }
     close(static_cast <int> (socket->ident));
     Utils::eraseMap(receive, static_cast <int> (socket->ident));
     Utils::eraseMap(send, static_cast <int> (socket->ident));

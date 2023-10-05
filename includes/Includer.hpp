@@ -27,8 +27,9 @@
 #include <time.h>
 
 typedef struct uData {
-    int masterSocket;
-    int masterPort;
+    int     masterSocket;
+    int     masterPort;
+    bool    connection;
 } uDada;
 
 #include "Utils.hpp"

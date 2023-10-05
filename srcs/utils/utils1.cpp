@@ -19,11 +19,6 @@ std::vector<int> Utils::vecStoI(std::vector<std::string> input)
 	return result;
 }
 
-char *      Utils::stoa(std::string const & str)
-{
-    return (const_cast<char *>(str.c_str()));
-}
-
 std::string Utils::getTime(time_t time)
 {
     std::time_t now = std::time(NULL);
@@ -153,4 +148,23 @@ std::string Utils::internalServerError(std::pair<int, std::string> & infos)
 std::string Utils::basicHTML(std::pair<int, std::string> const & infos)
 {
     return "<!DOCTYPE html>\n<html>\n<head>\n<title>" + Utils::itos<int>(infos.first) + "</title>\n</head>\n<body>\n<p>" + infos.second+ "</p>\n</body>\n</html>";
+}
+
+int        Utils::removeSocket(int kq, struct kevent * socket, int nfilter, int * filter, int flags, std::map<int, std::string>& receive, std::map<int, std::string>& send)
+{
+    int             tmp;
+    struct kevent   sockets[nfilter];
+
+    for (int i = 0; i < nfilter; i++)
+        EV_SET(&sockets[i], static_cast <int> (socket->ident), filter[i], flags, 0, 0, socket[i].udata);
+    tmp = kevent(kq, sockets, nfilter, NULL, 0, NULL);
+    if (socket->udata)
+    {
+        delete reinterpret_cast<uDada *> (socket->udata);
+        socket->udata = NULL;
+    }
+    close(static_cast <int> (socket->ident));
+    Utils::eraseMap(receive, static_cast <int> (socket->ident));
+    Utils::eraseMap(send, static_cast <int> (socket->ident));
+    return tmp;
 }

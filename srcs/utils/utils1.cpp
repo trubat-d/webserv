@@ -156,15 +156,26 @@ int        Utils::removeSocket(int kq, struct kevent * socket, int nfilter, int 
     struct kevent   sockets[nfilter];
 
     for (int i = 0; i < nfilter; i++)
-        EV_SET(&sockets[i], static_cast <int> (socket->ident), filter[i], flags, 0, 0, socket[i].udata);
-    tmp = kevent(kq, sockets, nfilter, NULL, 0, NULL);
-    if (socket->udata)
+        EV_SET(&sockets[i], static_cast <int> (socket->ident), filter[i], flags, 0, 0, socket->udata);
+    if (socket->udata != NULL)
     {
         delete reinterpret_cast<uDada *> (socket->udata);
         socket->udata = NULL;
     }
+    tmp = kevent(kq, sockets, nfilter, NULL, 0, NULL);
     close(static_cast <int> (socket->ident));
     Utils::eraseMap(receive, static_cast <int> (socket->ident));
     Utils::eraseMap(send, static_cast <int> (socket->ident));
     return tmp;
+}
+
+bool    Utils::timer(const std::clock_t start)
+{
+    static int i = 1;
+    std::clock_t end = std::clock();
+    if ((end - start) >= static_cast<unsigned long> (i * CLOCKS_PER_SEC))
+        std::cout << i++ << "sc passed\n" << std::endl;
+    if (end - start >= 5 * CLOCKS_PER_SEC)
+        return true;
+    return false;
 }

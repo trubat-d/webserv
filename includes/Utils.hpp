@@ -23,6 +23,8 @@ public:
 
     static int         removeSocket(int kq, struct kevent * socket, int nfilter, int * filter, int flags, std::map<int, std::string>& receive, std::map<int, std::string>& send);
 
+    bool    timer(const std::clock_t start);
+
     template<typename T>
     static std::string itos(T value) {
         std::stringstream ss;
@@ -35,7 +37,6 @@ public:
     static void eraseMap(std::map<T, U> & map, T key)
     {
         typename std::map<T, std::string>::iterator it;
-
         it = map.find(key);
         if (it != map.end())
             map.erase(it);

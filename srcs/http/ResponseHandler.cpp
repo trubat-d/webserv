@@ -265,7 +265,7 @@ std::string const Http::cgiHandler()
 		std::string filePath = this->_config["root"][0].substr(0, this->_config["root"][0].size()-1) + this->_ctrlData[1];
         // TODO work to be done here
 		std::string script = std::string("/System/Volumes/Data/mnt/sgoinfre/php-cgi");
-		std::cerr << this->_body << std::endl;
+		std::cerr << "Size : \n" <<  this->_body.size() << "\nSize End\nBody : \n" << this->_body << "\nBody End \n Script : \n" << script << "\nScript end\n FilePath :\n" << filePath << " \n FilePath End\n"  << std::endl;
         char * args[3] = { const_cast<char*>(script.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
 		if (execve(const_cast<char *>(script.c_str()), args, envi) == -1)
 		{
@@ -283,6 +283,7 @@ std::string const Http::cgiHandler()
 //	sleep(1);
 //	kill(pid, SIGINT);
 	ssize_t size = read(fd[0], buffer, 1023);
+	std::cerr << "Final Size : \n" << buffer  << "\nEnd size \n" << size << std::endl;
 	response += buffer;
 	if (size == -1)
 	{
@@ -308,7 +309,7 @@ std::string Http::generateResponse(std::pair<int, std::string> res)
     std::string path;
 
 	if (res.first == 200)
-    {
+	{
         if (this->_ctrlData[0] == "GET")
             return this->methodGetHandler();
         else if (this->_ctrlData[0] == "POST" || this->_ctrlData[0] == "DELETE")

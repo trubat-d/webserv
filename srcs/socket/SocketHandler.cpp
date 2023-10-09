@@ -125,7 +125,6 @@ void	Socket::readSocket(struct kevent & socket)
 	ssize_t			length;
 	struct kevent	change[2] = {};
 	char			buffer[2048] = {};
-
     //SI ERREUR SUR LE SOCKET
 	if (socket.flags & EV_EOF)
         return (void) Utils::removeSocket(this->getKqueue(), &socket, 1, (int [1]){EVFILT_READ}, EV_DELETE, this->_rcv, this->_snd);
@@ -263,6 +262,9 @@ int     Socket::parseSocket(std::string & read, std::string & sndRequest)
                 sndRequest = read.substr(endHeaders + 4 + bodyLen);
                 read.erase(endHeaders + 4 + bodyLen);
             }
+			//IF NOT HAVE ALL BODY YET
+			if (endHeaders + 3 + bodyLen > read.size())
+				return keepReading;
         }
     }
     // PAS TROUVER METHODE
@@ -333,8 +335,8 @@ int	Socket::run()
             //CHECK SI ACCEPT READ OR WRITE
             if (indexSocket >= 0)
                 this->addSocket(indexSocket);
-			else if (indexSocket == -1 && events[i].filter == EVFILT_READ )
-                this->readSocket(events[i]);
+			else if (indexSocket == -1 && events[i].filter == EVFILT_READ)
+				this->readSocket(events[i]);
 			else if (indexSocket == -1 && events[i].filter == EVFILT_WRITE)
                 this->writeSocket(events[i]);
 		}

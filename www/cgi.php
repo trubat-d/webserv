@@ -5,7 +5,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
 
     echo "SALUT\n";
     $data = $_FILES["userfile"]["name"];
+//     $data2 = $_POST["userfile"];
+//     move_uploaded_file($data, "./test");
+    echo $data;
     echo "\nFIN\n";
+//     print_r(array_keys($_FILES));
+//     print_r(array_keys($_POST));
+    echo "\nFIN2\n";
 
 
 }
@@ -17,9 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>File Upload</title>
-    <>
 </head>
 <body>
-    <h1>File uploaded</h1>
 </body>
 </html>

@@ -128,7 +128,8 @@ std::string  Utils::fileToString(std::string & fullPath, std::pair<int, std::str
     while (size > 0)
     {
         buffer[size] = 0;
-        body += buffer;
+		std::string temp(buffer, size);
+        body += temp;
         size = read(fd, buffer, 1023);
         if (size == -1)
             return internalServerError(infos);

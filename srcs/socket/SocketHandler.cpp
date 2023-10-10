@@ -156,7 +156,6 @@ void	Socket::readSocket(struct kevent & socket)
 	ssize_t			length;
 	struct kevent	change[2] = {};
 	char			buffer[2048] = {};
-
     //SI ERREUR SUR LE SOCKET
 	if (socket.flags & EV_EOF)
         return (void) Utils::removeSocket(this->getKqueue(), &socket, 1, (int [1]){EVFILT_READ}, EV_DELETE, this->_rcv, this->_snd);
@@ -174,10 +173,13 @@ void	Socket::readSocket(struct kevent & socket)
         itSnd->second = Utils::basicError(std::pair<int, std::string> (500, "HTTP/1.1 500 Internal Server Error\r\n"));
         return ;
     }
-
+	if (length < 2047)
+	{
+		std::cout << "SALOT" << std::endl;
+	}
     //CONCATENE CONTENU LU DANS MAP:RCV
 	buffer[length] = 0;
-	std::string temp(buffer);
+	std::string temp(buffer, length);
 	itRcv->second += temp;
 
     //SI LU ASSEZ D'INFO POUR GENERER UNE REPONSE
@@ -295,6 +297,9 @@ int     Socket::parseSocket(std::string & read, std::string & sndRequest)
                 sndRequest = read.substr(endHeaders + 4 + bodyLen);
                 read.erase(endHeaders + 4 + bodyLen);
             }
+			//IF NOT HAVE ALL BODY YET
+			if (endHeaders + 3 + bodyLen > read.size())
+				return keepReading;
         }
     }
     // PAS TROUVER METHODE
@@ -312,9 +317,6 @@ void	Socket::writeSocket(struct kevent & socket)
     //IF CONNECTION LOST OR DON'T FIND IN MAP
 	if (socket.flags & EV_EOF || ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end()))
         return (void) Utils::removeSocket(this->getKqueue(), &socket, 2, (int [2]){EVFILT_READ, EVFILT_WRITE}, EV_DELETE, this->_rcv, this->_snd);
-
-	it->second = "HTTP/1.1 200 OK\r\n" + it->second; // TODO: ecrire par dessus cgi
-
     //WRITE INTO SOCKET
 	if ((length = write(static_cast <int> (socket.ident), it->second.data(), \
 	it->second.length() > 2047 ? 2047 : it->second.length())) != -1)
@@ -324,12 +326,13 @@ void	Socket::writeSocket(struct kevent & socket)
     if (length == -1 || (it->second.empty() && !reinterpret_cast<uDada *>(socket.udata)->connection))
         return (void) Utils::removeSocket(this->getKqueue(), &socket, 2, (int [2]){EVFILT_READ, EVFILT_WRITE}, EV_DELETE, this->_rcv, this->_snd);
 
-    //IF WROTE EVERYTHING & CONNECTION: KEEP-ALIVE
+    //IF WROTE EVERYTHING & CONNECTION: KEEP ALIVE
 	if (it->second.empty())
 	{
-        this->_snd.erase(it);
-		EV_SET(&socket, static_cast <int> (socket.ident), EVFILT_WRITE, EV_DELETE, 0, 0, socket.udata);
+		//kevent TODO REFLECHIR BONNE IMPLEMENTATION, free le UDATA ?
+		EV_SET(&socket, socket.ident, EVFILT_WRITE, EV_DELETE, 0, 0, socket.udata);
 		kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL);
+
 	}
 }
 
@@ -365,8 +368,8 @@ int	Socket::run()
             //CHECK SI ACCEPT READ OR WRITE
             if (indexSocket >= 0)
                 this->addSocket(indexSocket);
-			else if (indexSocket == -1 && events[i].filter == EVFILT_READ )
-                this->readSocket(events[i]);
+			else if (indexSocket == -1 && events[i].filter == EVFILT_READ)
+				this->readSocket(events[i]);
 			else if (indexSocket == -1 && events[i].filter == EVFILT_WRITE)
                 this->writeSocket(events[i]);
 		}

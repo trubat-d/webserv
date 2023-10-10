@@ -139,7 +139,7 @@ std::string const Http::fullResponse(std::string const & path, std::string const
     struct stat         fileInfos = {};
 
     (void) stat(path.c_str(), &fileInfos);
-    response = infos.second;
+	response += infos.second;
     response += "Date: " + Utils::getTime(0) + "\r\n";
     response += "Content-Type: "  + getMimeType(path) + "\r\n";
     response += "Content-Length: " + Utils::itos(static_cast<int>(fileInfos.st_size)) + "\r\n";
@@ -157,6 +157,7 @@ std::string const Http::fullResponse(std::string const & path, std::string const
     }
     response += "\r\n";
     response += body + "\r\n";
+	std::cout << response << std::endl;
     return response;
 }
 
@@ -185,13 +186,23 @@ std::string const Http::methodGetHandler()
 	}
 	//basic case
     if (this->_ctrlData[1].back() == '/')
-        this->_ctrlData[1] += "index.html";
+	{
+		if(this->_config.find("autoindex") != this->_config.end())
+		{
+			if(this->_config.at("autoindex")[0] == "on")
+			{
+
+			}
+		}
+		this->_ctrlData[1] += "index.html";
+	}
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
     //fullPath.insert(fullPath.begin(), '.');
     //test path
     int fd = open(fullPath.c_str(), O_RDONLY);
     if (fd != -1)
     {
+
         close (fd);
         return this->fullResponse(fullPath.c_str(), Utils::fileToString(fullPath, status), status);
     }
@@ -263,7 +274,6 @@ std::string Http::cgiHandler()
 		std::string filePath = this->_config["root"][0].substr(0, this->_config["root"][0].size()-1) + this->_ctrlData[1];
         // TODO work to be done here
 		std::string script = std::string("/System/Volumes/Data/mnt/sgoinfre/php-cgi");
-		std::cerr << this->_body << std::endl;
         char * args[3] = { const_cast<char*>(script.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
 		if (execve(const_cast<char *>(script.c_str()), args, envi) == -1)
 		{
@@ -284,19 +294,21 @@ std::string Http::cgiHandler()
 	if (status)
 		return "502 Bad Gateway\r\n";
 	ssize_t size = read(fd[0], buffer, 1023);
-	response += buffer;
+	std::string temp_s(buffer, size);
+	response += temp_s;
 	if (size == -1)
 		return "502 Bad Gateway\r\n";
 	while (size == 1023)
 	{
 		buffer[size] = 0;
-		response += buffer;
+		std::string temp(buffer, size);
+		response += temp;
 		size = read(fd[0], buffer, 1023);
 		if (size == -1)
 			return "502 Bad Gateway\r\n";
 	}
 	close (fd[0]);
-	return response;
+	return "HTTP/1.1 200 OK\r\n" + response;
 }
 
 std::string Http::generateResponse(std::pair<int, std::string> res)
@@ -304,7 +316,7 @@ std::string Http::generateResponse(std::pair<int, std::string> res)
     std::string path;
 
 	if (res.first == 200)
-    {
+	{
         if (this->_ctrlData[0] == "GET")
             return this->methodGetHandler();
         else if (this->_ctrlData[0] == "POST" || this->_ctrlData[0] == "DELETE")

@@ -173,9 +173,28 @@ bool    Utils::timer(const std::clock_t start)
 {
     static int i = 1;
     std::clock_t end = std::clock();
-    if ((end - start) >= static_cast<unsigned long> (i * CLOCKS_PER_SEC))
+    if (static_cast<int>((end - start)) >= (i * CLOCKS_PER_SEC))
         std::cout << i++ << "sc passed\n" << std::endl;
     if (end - start >= 5 * CLOCKS_PER_SEC)
         return true;
     return false;
+}
+
+std::string   Utils::basicError(std::pair<int, std::string> const & infos)
+{
+    std::string body(basicHTML(infos));
+    std::string tmp;
+    std::stringstream ss;
+
+    ss.clear();
+    tmp += infos.second;
+    tmp += "Data: " + Utils::getTime(0) + "\r\n";
+    tmp += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
+    tmp += "Connection: close\r\n";
+    tmp += "Content-Type: text/html; charset=utf-8\r\n";
+    ss << body.size();
+    tmp += "Content-Length: " + ss.str() + "\r\n";
+    tmp += "\r\n";
+    tmp += body;
+    return tmp;
 }

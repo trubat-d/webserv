@@ -94,7 +94,7 @@ std::pair<int, std::string>	Http::processRequest(Parser &config)
 		if(!this->_config.at("root")[0].empty() && !this->_config.at("root")[0].compare(0,2,"./"))
 			temproot.erase(0,1);
         char * temp = strcat(dir, temproot.c_str());
-        struct stat statbuf;
+        struct stat statbuf = {};
         stat(temp, &statbuf);
         if(!S_ISDIR(statbuf.st_mode))
             return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
@@ -227,7 +227,7 @@ std::string const Http::getMimeType(std::string path)
 
 
 
-std::string const Http::cgiHandler()
+std::string Http::cgiHandler()
 {
 	int 		fd[2];
 	int			status;
@@ -243,9 +243,7 @@ std::string const Http::cgiHandler()
 	{
 		std::cerr << "Write START \n" << std::endl;
 		if (write(bodyPipe[1], this->_body.c_str(), this->_body.size()) == -1)
-		{
-			exit (-1);
-		}
+            return "502 Bad Gateway\r\n";
 		std::cerr << "Write END \n" << std::endl;
 	}
 	int pid = fork();
@@ -277,29 +275,27 @@ std::string const Http::cgiHandler()
 	close (fd[1]);
 	close(bodyPipe[0]);
 	close(bodyPipe[1]);
-	waitpid(pid, &status, 0);
-	if (status == -1)
+    const std::clock_t start = std::clock();
+    while (waitpid(pid, &status, WNOHANG) != pid)
+    {
+        if (Utils::timer(start))
+            kill(pid, SIGINT);
+    }
+	if (status)
 		return "502 Bad Gateway\r\n";
-//	sleep(1);
-//	kill(pid, SIGINT);
 	ssize_t size = read(fd[0], buffer, 1023);
 	response += buffer;
 	if (size == -1)
-	{
 		return "502 Bad Gateway\r\n";
-	}
 	while (size == 1023)
 	{
 		buffer[size] = 0;
 		response += buffer;
 		size = read(fd[0], buffer, 1023);
 		if (size == -1)
-		{
 			return "502 Bad Gateway\r\n";
-		}
 	}
 	close (fd[0]);
-	std::cout << "boug" << std::endl;
 	return response;
 }
 

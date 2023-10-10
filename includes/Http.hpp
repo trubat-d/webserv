@@ -49,7 +49,7 @@ public:
     std::string const methodGetHandler();
     std::string const notCorrectMethodHandler();
     std::string const fullResponse(std::string const & path, std::string const & body, std::pair<int, std::string> & infos);
-    std::string const cgiHandler();
+    std::string cgiHandler();
     std::string const getMimeType(std::string path);
 
 ///////////////////////////////////////////////////////////////////////

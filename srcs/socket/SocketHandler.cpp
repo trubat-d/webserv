@@ -1,6 +1,6 @@
 #include "Socket.hpp"
 
-Socket::Socket()
+Socket::Socket(): _kq(-1), _hint((struct sockaddr_in){}), _configHead(NULL)
 {
 	this->_socket.push_back(socket(AF_INET, SOCK_STREAM, 0));
 	if (this->_socket.at(0) < 0)
@@ -14,7 +14,7 @@ Socket::Socket()
 		throw(Error::BindException());
 }
 
-Socket::Socket(std::vector<int> port, Parser *config)
+Socket::Socket(std::vector<int> port, Parser *config): _kq(-1), _hint((struct sockaddr_in){}), _configHead(NULL)
 {
 	this->_configHead = config;
 	this->_hint.sin_family = AF_INET;
@@ -45,7 +45,11 @@ int Socket::getWorkerConnections()
         return Utils::vecStoI(event)[0];
 }
 
-Socket::Socket(Socket const & instance): _socket(instance.getSocket()) {}
+Socket::Socket(Socket const & instance)
+{
+    if (this != &instance)
+        *this = instance;
+}
 
 Socket::~Socket()
 {
@@ -58,7 +62,14 @@ Socket::~Socket()
 Socket &	Socket::operator=(Socket const & instance)
 {
 	if (this != &instance)
-		this->_socket = instance.getSocket();
+    {
+        this->_socket = instance.getSocket();
+        this->_kq = instance.getKqueue();
+        this->_hint = instance.getHint();
+        this->_rcv = instance.getRcv();
+        this->_snd = instance.getSnd();
+        this->_configHead = instance.getConfigHead();
+    }
 	return *this;
 }
 
@@ -72,6 +83,26 @@ std::vector<int>	Socket::getSocket() const
 int					Socket::getKqueue() const
 {
 	return this->_kq;
+}
+
+std::map<int, std::string>  Socket::getRcv() const
+{
+    return this->_rcv;
+}
+
+std::map<int, std::string>  Socket::getSnd() const
+{
+    return this->_snd;
+}
+
+struct sockaddr_in  Socket::getHint() const
+{
+    return this->_hint;
+}
+
+Parser *  Socket::getConfigHead() const
+{
+    return this->_configHead;
 }
 
 void				Socket::setKqueue()
@@ -132,7 +163,7 @@ void	Socket::readSocket(struct kevent & socket)
     //RECUPERER DANS LES 2 MAPS LES STRING CORRESPONDANT AU SOCKET
 	if ((itRcv = this->_rcv.find(static_cast <int> (socket.ident))) == this->_rcv.end() || (itSnd = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
     {
-        //TODO GENERER UNE RESPONSE BASIC;
+        //TODO FERMER LE SOCKET CAR PEUT PAS REPONDRE SELON CODE // OU RAJOUTER LE SOCKET DANS LIST ET REPONDRE ERREUR BASIC;
         return ;
     }
 
@@ -140,7 +171,7 @@ void	Socket::readSocket(struct kevent & socket)
 	if ((length = read(static_cast <int> (socket.ident), buffer, 2047)) == -1)
     {
         Utils::eraseMap(this->_rcv, static_cast <int> (socket.ident));
-        //TODO GENERER UNE RESPONSE BASIC;
+        itSnd->second = Utils::basicError(std::pair<int, std::string> (500, "HTTP/1.1 500 Internal Server Error\r\n"));
         return ;
     }
 
@@ -155,7 +186,7 @@ void	Socket::readSocket(struct kevent & socket)
 	{
         EV_SET(&change[0], socket.ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, socket.udata);
         // SI PAS DE 2ND REQUEST ET TOUT LU SUR SOCKET ET CONNECTION: CLOSED!
-        if (itRcv->second.empty() && length < 2047 && !reinterpret_cast<uDada *> (socket.udata)->connection) //TODO VERIFIER GARDER LENGTH < 2047
+        if (itRcv->second.empty() && !reinterpret_cast<uDada *> (socket.udata)->connection)
         {
             //ENLEVE EVENT DE READ DU SOCKET ET RAJOUTE EVENT DE WRITE DU SOCKET
             EV_SET(&change[1], socket.ident, EVFILT_READ, EV_DELETE, 0, 0, socket.udata);
@@ -164,7 +195,6 @@ void	Socket::readSocket(struct kevent & socket)
         //RAJOUTE EVENT WRITE ET KEEP EVENT READ DU SOCKET
         kevent(this->getKqueue(), change, 1, NULL, 0, NULL);
 	}
-    //TODO CREER UN TIMEOUT SI KEEP WAITING FOR INFO BUT NOTHING COMES
 }
 
 int    Socket::processSocket(struct kevent & socket, std::string & request, std::string & response)
@@ -190,7 +220,9 @@ int    Socket::processSocket(struct kevent & socket, std::string & request, std:
                 res = client.setCGIEnv(socket);
             //IF CONNECTION: KEEP-ALIVE --> udata.connection = true
             if (client.getHeader("Connection") == "keep-alive")
-                reinterpret_cast<uDada *> (socket.udata)->connection = true;
+                if (socket.udata)
+                    reinterpret_cast<uDada *> (socket.udata)->connection = true;
+            //CREATE RESPONSE
             response = client.generateResponse(res);
         }
         else
@@ -198,9 +230,9 @@ int    Socket::processSocket(struct kevent & socket, std::string & request, std:
     }
     //TODO GENERER UNE RESPONSE BASIC;
     else if (parseValue == badRequest)
-        response = client.generateResponse(std::pair<int, std::string> (400, "HTTP/1.1 400 Bad Request\r\n"));
+        response = Utils::basicError(std::pair<int, std::string> (400, "HTTP/1.1 400 Bad Request\r\n")); //TODO check if ok
     else if (parseValue == methodNotAllowed)
-        response = client.generateResponse(std::pair<int, std::string> (500, "HTTP/1.1 500 Method Not Allowed\r\n"));
+        response = Utils::basicError(std::pair<int, std::string> (500, "HTTP/1.1 500 Method Not Allowed\r\n")); //TODO check if ok
     return parseValue;
 }
 
@@ -281,8 +313,8 @@ void	Socket::writeSocket(struct kevent & socket)
 	if (socket.flags & EV_EOF || ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end()))
         return (void) Utils::removeSocket(this->getKqueue(), &socket, 2, (int [2]){EVFILT_READ, EVFILT_WRITE}, EV_DELETE, this->_rcv, this->_snd);
 
-//	std::cout << it->second << std::endl;
-	it->second = "HTTP/1.1 200 OK\r\n" + it->second;
+	it->second = "HTTP/1.1 200 OK\r\n" + it->second; // TODO: ecrire par dessus cgi
+
     //WRITE INTO SOCKET
 	if ((length = write(static_cast <int> (socket.ident), it->second.data(), \
 	it->second.length() > 2047 ? 2047 : it->second.length())) != -1)

@@ -26,8 +26,12 @@ public:
 
 	Socket &	operator=(Socket const & instance);
 
-	std::vector<int>	getSocket() const;
-	int					getKqueue() const;
+	std::vector<int>	        getSocket() const;
+	int					        getKqueue() const;
+    std::map<int, std::string>  getRcv() const;
+    std::map<int, std::string>  getSnd() const;
+    struct sockaddr_in          getHint() const;
+    Parser *                    getConfigHead() const;
 	void				setKqueue();
 	int					isSocket(uintptr_t socket) const;
 

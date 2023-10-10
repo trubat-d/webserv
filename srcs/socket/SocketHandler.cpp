@@ -142,10 +142,13 @@ void	Socket::readSocket(struct kevent & socket)
         //TODO GENERER UNE RESPONSE BASIC;
         return ;
     }
-
+	if (length < 2047)
+	{
+		std::cout << "SALOT" << std::endl;
+	}
     //CONCATENE CONTENU LU DANS MAP:RCV
 	buffer[length] = 0;
-	std::string temp(buffer);
+	std::string temp(buffer, length);
 	itRcv->second += temp;
 
     //SI LU ASSEZ D'INFO POUR GENERER UNE REPONSE
@@ -284,7 +287,6 @@ void	Socket::writeSocket(struct kevent & socket)
         return (void) Utils::removeSocket(this->getKqueue(), &socket, 2, (int [2]){EVFILT_READ, EVFILT_WRITE}, EV_DELETE, this->_rcv, this->_snd);
 
 //	std::cout << it->second << std::endl;
-	it->second = "HTTP/1.1 200 OK\r\n" + it->second;
     //WRITE INTO SOCKET
 	if ((length = write(static_cast <int> (socket.ident), it->second.data(), \
 	it->second.length() > 2047 ? 2047 : it->second.length())) != -1)
@@ -294,12 +296,13 @@ void	Socket::writeSocket(struct kevent & socket)
     if (length == -1 || (it->second.empty() && !reinterpret_cast<uDada *>(socket.udata)->connection))
         return (void) Utils::removeSocket(this->getKqueue(), &socket, 2, (int [2]){EVFILT_READ, EVFILT_WRITE}, EV_DELETE, this->_rcv, this->_snd);
 
-    //IF WROTE EVERYTHING & CONNECTION: KEEP-ALIVE
+    //IF WROTE EVERYTHING & CONNECTION: KEEP ALIVE
 	if (it->second.empty())
 	{
-        this->_snd.erase(it);
-		EV_SET(&socket, static_cast <int> (socket.ident), EVFILT_WRITE, EV_DELETE, 0, 0, socket.udata);
+		//kevent TODO REFLECHIR BONNE IMPLEMENTATION, free le UDATA ?
+		EV_SET(&socket, socket.ident, EVFILT_WRITE, EV_DELETE, 0, 0, socket.udata);
 		kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL);
+
 	}
 }
 

@@ -7,8 +7,9 @@
 <p>BONJOUR mes petits louslous</p>
 <form action="cgi.php" method="post" enctype="multipart/form-data">
     <label for="file">File</label>
-    <input id="file" name="userfile" type="file" />
+    <input id="file" name="userfile[]" type="file" multiple />
     <button>Upload</button>
+    <img src="/upload/picture.png">
 </form>
 </body>
 </html>

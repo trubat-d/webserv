@@ -138,6 +138,8 @@ std::string const Http::fullResponse(std::string const & path, std::string const
     std::string         response;
     struct stat         fileInfos = {};
 
+    if (path.empty())
+        return Utils::basicError(infos);
     (void) stat(path.c_str(), &fileInfos);
 	response += infos.second;
     response += "Date: " + Utils::getTime(0) + "\r\n";
@@ -185,30 +187,32 @@ std::string const Http::methodGetHandler()
 		}
 	}
 	//basic case
-    if (this->_ctrlData[1].back() == '/')
-	{
-		if(this->_config.find("autoindex") != this->_config.end())
-		{
-			if(this->_config.at("autoindex")[0] == "on")
-			{
-
-			}
-		}
-		this->_ctrlData[1] += "index.html";
-	}
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
-    //fullPath.insert(fullPath.begin(), '.');
-    //test path
+    if (fullPath.back() == '/')
+	{
+        if (Utils::canAccessfile(this->_ctrlData[1] + "index.html"))
+            this->_ctrlData[1] += "index.html";
+		else if(this->_config.find("autoindex") != this->_config.end() && this->_config.at("autoindex")[0] == "on")
+		{
+            DIR * dir = opendir(fullPath.c_str());
+            if (!dir) //TODO: changer type error
+                return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found\r\n"));
+            return this->generateAutoIndex(dir, this->_ctrlData[1]);
+		}
+        else //TODO: changer type error
+            return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found\r\n"));
+	}
     int fd = open(fullPath.c_str(), O_RDONLY);
     if (fd != -1)
     {
-
         close (fd);
         return this->fullResponse(fullPath.c_str(), Utils::fileToString(fullPath, status), status);
     }
     else
         return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found\r\n"));
 }
+
+
 
 std::string const Http::getMimeType(std::string path)
 {
@@ -236,7 +240,24 @@ std::string const Http::getMimeType(std::string path)
 //    return response;
 //}
 
+std::string Http::generateAutoIndex(DIR * dir, std::string const & path) const
+{
+    struct dirent *ent;
+    std::vector<std::string> filesName;
 
+    while ((ent = readdir(dir)) != NULL)
+        filesName.push_back(ent->d_name);
+    closedir (dir);
+    std::string tmp;
+    tmp += "<!DOCTYPE html>\n<html>\n<body>\n<h1>Auto-Index</h1>\n<p>";
+    for (std::vector<std::string>::iterator it = filesName.begin(); it != filesName.end(); it++)
+    {
+        tmp += "<a href=\"http://" + this->_masterSocketInfo.host + ":" + Utils::itos(this->_masterSocketInfo.masterPort) + "/" + path + *it + ">";
+        tmp += *it + "</a></p>\n</body>\n</html>";
+    }
+    tmp += "</body>\n</html>\n";
+    return tmp;
+}
 
 std::string Http::cgiHandler()
 {
@@ -272,10 +293,29 @@ std::string Http::cgiHandler()
 			envi[i] = const_cast<char *>(this->_cgiEnv[i].c_str());
 		envi[envSize] = nullptr;
 		std::string filePath = this->_config["root"][0].substr(0, this->_config["root"][0].size()-1) + this->_ctrlData[1];
-        // TODO work to be done here
-		std::string script = std::string("/System/Volumes/Data/mnt/sgoinfre/php-cgi");
-        char * args[3] = { const_cast<char*>(script.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
-		if (execve(const_cast<char *>(script.c_str()), args, envi) == -1)
+
+        /////////////////////////////////////////////////TODO: CHECK JOB
+        std::string script2;
+        size_t merde;
+        std::string bouh = ".php-cgi.";
+        merde = this->_ctrlData[1].find(bouh);
+        if (merde == std::string::npos)
+        {
+            bouh = ".py.";
+            merde = this->_ctrlData[1].find(".py.");
+        }
+        if (merde == std::string::npos)
+            exit (-1);
+        std::vector<std::string>::iterator where = std::find(this->_config.at("cgi").begin(), this->_config.at("cgi").end(), bouh);
+        if (where != this->_config.at("cgi").end())
+            script2 = *(where+1);
+        else
+            exit(-1);
+        /////////////////////////////////////////////////
+
+		//std::string script = std::string("/System/Volumes/Data/mnt/sgoinfre/php-cgi");
+        char * args[3] = { const_cast<char*>(script2.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
+		if (execve(const_cast<char *>(script2.c_str()), args, envi) == -1)
 		{
 			std::cerr << "exited on execve with filepath = " << args[0] << " + " << args[1] << std::endl;
 			exit(-1);

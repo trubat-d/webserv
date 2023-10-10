@@ -26,11 +26,14 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <dirent.h>
+
 
 typedef struct uData {
     int     masterSocket;
     int     masterPort;
     bool    connection;
+    std::string   host;
 } uDada;
 
 #include "Utils.hpp"

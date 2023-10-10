@@ -27,6 +27,8 @@ public:
 
     static std::string   basicError(std::pair<int, std::string> const & infos);
 
+    static bool                    canAccessfile(std::string const & path);
+
     template<typename T>
     static std::string itos(T value)
     {

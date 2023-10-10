@@ -127,6 +127,7 @@ void	Socket::addSocket(int index)
 	struct kevent	newClient = {};
 	struct sockaddr_in	sockAddr = {};
 	socklen_t len = sizeof(sockAddr);
+    char host[NI_MAXHOST];
 
 
 	newSocket = accept(this->_socket.at(index), NULL, NULL);
@@ -140,6 +141,10 @@ void	Socket::addSocket(int index)
 	if (getsockname(this->_socket.at(index), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
 		return ;
 	info->masterPort = ntohs(sockAddr.sin_port);
+    if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, NULL, NI_MAXSERV, NI_NUMERICSERV))
+        return ;
+    std::string tmp(host, NI_MAXHOST);
+    info->host = tmp;
 	EV_SET(&newClient, newSocket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, info);
 	if (kevent(this->getKqueue(), &newClient, 1, NULL, 0, NULL) != -1)
     {

@@ -312,7 +312,7 @@ std::string Http::cgiHandler()
         merde = this->_ctrlData[1].find(bouh);
         if (merde == std::string::npos)
         {
-            bouh = ".py.";
+            bouh = ".py.cgi";
             merde = this->_ctrlData[1].find(".py.cgi");
         }
         if (merde == std::string::npos)
@@ -332,7 +332,7 @@ std::string Http::cgiHandler()
         char * args[3] = { const_cast<char*>(script2.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
 		if (execve(const_cast<char *>(script2.c_str()), args, envi) == -1)
 		{
-			std::cerr << "exited on execve with filepath = " << args[0] << " + " << args[1] << std::endl;
+			std::cerr << "exited on execve with filepath = " << args[0] << args[1] << std::endl;
 			exit(-1);
 		}
 		exit(0);

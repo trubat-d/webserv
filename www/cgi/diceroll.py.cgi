@@ -17,6 +17,11 @@ body = f"""<html>
 headers = "Content-type: text/html; charset=UTF-8"
 headers = f"Content-length: {len(body)}" + separator + headers
 
+if os.environ["HTTP_CONNECTION"] == "keep-alive":
+    headers = f"Connection: {os.environ['HTTP_CONNECTION']}" + separator + headers
+else:
+    headers = "Connection: close" + separator
+
 status = "Status: 200 OK" + separator
 
 print(status + headers + 2 * separator + body)

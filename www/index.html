@@ -5,11 +5,12 @@
 </head>
 <body>
 <p>BONJOUR mes petits louslous</p>
-<form action="cgi.php" method="post" enctype="multipart/form-data">
+<form action="./cgi/post.php.cgi" method="post" enctype="multipart/form-data">
     <label for="file">File</label>
     <input id="file" name="userfile[]" type="file" multiple />
     <button>Upload</button>
-    <img src="/upload/picture.png">
 </form>
+<br><br>
+<a href="cgi/listing.php.cgi">Go to Listing</a>
 </body>
 </html>

@@ -49,6 +49,9 @@ std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
 	ss << this->_masterSocketInfo.masterPort;
 	ss >> tmp;
 	this->_cgiEnv.push_back(("SERVER_PORT=" + tmp)); // port on host running
+	tmp = getHeader("X-Filename");
+	if(tmp != NaV)
+		this->_cgiEnv.push_back("HTTP_X_FILENAME=" + tmp);
     return std::pair<int, std::string>(200, "HTTP/1.1 200 OK\r\n");
 }
 
@@ -100,7 +103,6 @@ std::pair<int, std::string>	Http::processRequest(Parser &config)
             return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
     }
 
-	std::cout << this->_body << std::endl;
 //  check the size of the body size versus the allowed size
     if(this->_config.find("client_max_body_size") != this->_config.end() && this->_config.at("client_max_body_size").size() == 1)
     {
@@ -144,7 +146,7 @@ std::string const Http::fullResponse(std::string const & path, std::string const
 	response += infos.second;
     response += "Date: " + Utils::getTime(0) + "\r\n";
     response += "Content-Type: "  + getMimeType(path) + "\r\n";
-    response += "Content-Length: " + Utils::itos(static_cast<int>(fileInfos.st_size)) + "\r\n";
+    response += "Content-Length: " + Utils::itos(body.size()) + "\r\n";
     response += "Last-Modified: " + Utils::getTime(fileInfos.st_mtime) + "\r\n";
     response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
     response += "Accept-Ranges: bytes\r\n";
@@ -159,7 +161,7 @@ std::string const Http::fullResponse(std::string const & path, std::string const
     }
     response += "\r\n";
     response += body;
-	std::cout << response << std::endl;
+//	std::cout << response << std::endl;
     return response;
 }
 
@@ -183,11 +185,21 @@ std::string const Http::methodGetHandler()
 				this->_cgiEnv.push_back(("PATH_INFO=" + this->_ctrlData[1].substr(pos + 4, _ctrlData[1].size() - pos - 4)));
 				this->_ctrlData[1].erase(pos + 4, _ctrlData[1].size() - pos - 4);
 			}
-			return this->cgiHandler();
 		}
+		return this->cgiHandler();
 	}
 	//basic case
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
+	if (Utils::canAccessfile(fullPath))
+	{
+		//code quand fichier ok
+	}
+	else if (Utils::isDir(fullPath))
+	{
+		//code dossier
+	}
+	else
+		//erruer
     if (fullPath.back() == '/')
 	{
         //TODO : FIND GOOD INDEX : this->_config.find("index")
@@ -217,10 +229,24 @@ std::string const Http::methodGetHandler()
 
 std::string const Http::getMimeType(std::string path)
 {
-    if(path.find('.') == std::string::npos)
+	std::string temp_path;
+	if(path.length() >= 4 && path.substr(path.length()-4, 4) == ".cgi")
+	{
+		temp_path = path.substr(0, path.length()-4);
+	}
+	else
+		temp_path = path;
+    if(temp_path.find('.') == std::string::npos)
         return "";
-    std::string const temp = Utils::mimeTypes.at(std::string(path.begin() + path.find_last_of(".", path.size()), path.end()));
-    return temp;
+	std::string tmp_ext = std::string(temp_path.begin() + temp_path.find_last_of(".", temp_path.size()), temp_path.end());
+	if(Utils::mimeTypes.find(tmp_ext) != Utils::mimeTypes.end())
+	{
+    	std::string const temp = Utils::mimeTypes.at(tmp_ext);
+    	return temp;
+	}
+	//TODO GENERATE ERROR
+	std::cerr << "Mime type doesn't appear to be supported" << std::endl;
+	return "";
 }
 
 //std::string const Http::notCorrectMethodHandler()
@@ -255,7 +281,7 @@ std::string Http::generateAutoIndex(DIR * dir, std::string const & path) const
     body += "<!DOCTYPE html>\n<html>\n<body>\n<h1>Auto-Index</h1>\n";
     for (std::vector<std::string>::iterator it = filesName.begin(); it != filesName.end(); it++)
     {
-        body += "<p><a href=\"http://" + this->_masterSocketInfo.host + Utils::itos(this->_masterSocketInfo.masterPort) + path + *it + "\">";
+        body += "<p><a href=\"http://" + this->_config.at("server_name")[0] + path + *it + "\">";
         body += *it;
         body += "</a></p>\n";
     }
@@ -270,6 +296,7 @@ std::string Http::generateAutoIndex(DIR * dir, std::string const & path) const
     response += "Connection: ";
     response += getHeader("Connection") == "keep-alive" ? "keep-alive\r\n\r\n" : "close\r\n\r\n";
     response += body;
+	std::cout << response << std::endl;
     return response;
 }
 
@@ -285,13 +312,6 @@ std::string Http::cgiHandler()
 	std::cout << "ENTERED CGI HANDLER" << std::endl;
 	pipe(bodyPipe);
 	pipe(fd);
-	if (!this->_body.empty())
-	{
-		std::cerr << "Write START \n" << std::endl;
-		if (write(bodyPipe[1], this->_body.c_str(), this->_body.size()) == -1)
-            return "502 Bad Gateway\r\n";
-		std::cerr << "Write END \n" << std::endl;
-	}
 	int pid = fork();
 	if (!pid)
 	{
@@ -315,7 +335,7 @@ std::string Http::cgiHandler()
         merde = this->_ctrlData[1].find(bouh);
         if (merde == std::string::npos)
         {
-            bouh = ".py.";
+            bouh = ".py.cgi";
             merde = this->_ctrlData[1].find(".py.cgi");
         }
         if (merde == std::string::npos)
@@ -335,10 +355,31 @@ std::string Http::cgiHandler()
         char * args[3] = { const_cast<char*>(script2.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
 		if (execve(const_cast<char *>(script2.c_str()), args, envi) == -1)
 		{
-			std::cerr << "exited on execve with filepath = " << args[0] << " + " << args[1] << std::endl;
+			std::cerr << "exited on execve with filepath = " << args[0] << args[1] << std::endl;
 			exit(-1);
 		}
 		exit(0);
+	}
+	if (!this->_body.empty())
+	{
+		std::cerr << "Write START \n" << std::endl;
+		if (this->_body.size() > 65000)
+		{
+			std::string tmp(this->_body);
+			int merde;
+			while (!tmp.empty() && (merde = write(bodyPipe[1], tmp.c_str(), tmp.size() > 65000 ? 65000 : tmp.size())) > 0)
+			{
+				if (merde == -1)
+					return "502 Bad Gateway\r\n";
+				tmp.erase(0, tmp.size() > 65000 ? 65000 : tmp.size());
+			}
+		}
+		else
+		{
+			if (write(bodyPipe[1], this->_body.c_str(), this->_body.size()) == -1)
+				return "502 Bad Gateway\r\n";
+		}
+		std::cerr << "Write END \n" << std::endl;
 	}
 	close (fd[1]);
 	close(bodyPipe[0]);

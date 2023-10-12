@@ -27,7 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
         if($result)
             echo "<p>File $end_name saved</p>";
         else
+        {
             echo "<p>Error Saving the file</p>";
+            header("HTTP/1.1 500 Internal Server Error");
+        }
         if(in_array(pathinfo($_FILES['userfile']['name'][$i])['extension'], $valid_image))
         {
             echo "<img src='$upload_dir$end_name'>";

@@ -29,7 +29,7 @@ ob_start();
     <script>
         function deleteFile(filename) {
             fetch('delete.php.cgi', {
-                method: 'DELETE',
+                method: 'DELETE',.
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Filename': filename,

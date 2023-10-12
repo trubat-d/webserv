@@ -190,16 +190,16 @@ std::string const Http::methodGetHandler()
 	}
 	//basic case
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
-	if (Utils::canAccessfile(fullPath))
-	{
-		//code quand fichier ok
-	}
-	else if (Utils::isDir(fullPath))
-	{
-		//code dossier
-	}
-	else
-		//erruer
+//	if (Utils::canAccessfile(fullPath))
+//	{
+//		//code quand fichier ok
+//	}
+//	else if (Utils::isDir(fullPath))
+//	{
+//		//code dossier
+//	}
+//	else
+//		//erruer
     if (fullPath.back() == '/')
 	{
         //TODO : FIND GOOD INDEX : this->_config.find("index")
@@ -393,19 +393,26 @@ std::string Http::cgiHandler()
 	if (status)
 		return "502 Bad Gateway\r\n";
 	ssize_t size = read(fd[0], buffer, 1023);
-	std::string temp_s(buffer, size);
-	response += temp_s;
 	if (size == -1)
 		return "502 Bad Gateway\r\n";
-	while (size == 1023)
+	if(size == 1023)
 	{
-		buffer[size] = 0;
-		std::string temp(buffer, size);
-		response += temp;
-		size = read(fd[0], buffer, 1023);
-		if (size == -1)
-			return "502 Bad Gateway\r\n";
+		while (size == 1023)
+		{
+			buffer[size] = 0;
+			std::string temp(buffer, size);
+			response += temp;
+			size = read(fd[0], buffer, 1023);
+			if (size == -1)
+				return "502 Bad Gateway\r\n";
+		}
 	}
+	else
+	{
+		std::string temp_s(buffer, size);
+		response += temp_s;
+	}
+
 	close (fd[0]);
 	return "HTTP/1.1 200 OK\r\n" + response;
 }

@@ -160,8 +160,8 @@ std::string const Http::fullResponse(std::string const & path, std::string const
         response += "\r\n";
     }
     response += "\r\n";
-    response += body + "\r\n";
-//	std::cout << response << std::endl;
+    response += body;
+	std::cout << response << std::endl;
     return response;
 }
 
@@ -182,7 +182,7 @@ std::string const Http::methodGetHandler()
 			}
 			if ((pos = this->_ctrlData[1].find(".cgi/")) != std::string::npos)
 			{
-				this->_cgiEnv.push_back(("PAT H_INFO=" + this->_ctrlData[1].substr(pos + 4, _ctrlData[1].size() - pos - 4)));
+				this->_cgiEnv.push_back(("PATH_INFO=" + this->_ctrlData[1].substr(pos + 4, _ctrlData[1].size() - pos - 4)));
 				this->_ctrlData[1].erase(pos + 4, _ctrlData[1].size() - pos - 4);
 			}
 		}
@@ -260,21 +260,33 @@ std::string const Http::getMimeType(std::string path)
 std::string Http::generateAutoIndex(DIR * dir, std::string const & path) const
 {
     struct dirent *ent;
+    std::string response;
+    std::string body;
     std::vector<std::string> filesName;
 
     while ((ent = readdir(dir)) != NULL)
         filesName.push_back(ent->d_name);
     closedir (dir);
-    std::string tmp;
-    //TODO rajouter headers
-    tmp += "<!DOCTYPE html>\n<html>\n<body>\n<h1>Auto-Index</h1>\n<p>";
+
+    body += "<!DOCTYPE html>\n<html>\n<body>\n<h1>Auto-Index</h1>\n";
     for (std::vector<std::string>::iterator it = filesName.begin(); it != filesName.end(); it++)
     {
-        tmp += "<a href=\"http://" + this->_masterSocketInfo.host + ":" + Utils::itos(this->_masterSocketInfo.masterPort) + "/" + path + *it + ">";
-        tmp += *it + "</a></p>\n</body>\n</html>";
+        body += "<p><a href=\"http://localhost:80" + path + *it + "\">";
+        body += *it;
+        body += "</a></p>\n";
     }
-    tmp += "</body>\n</html>\n";
-    return tmp;
+    body += "</body>\n</html>\n";
+
+    response += "HTTP/1.1 200 OK\r\n";
+    response += "Date: " + Utils::getTime(0) + "\r\n";
+    response += "Content-Type: text/html; charset=UTF-8\r\n";
+    response += "Content-Length: " + Utils::itos(body.size()) + "\r\n";
+    response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
+    response += "Accept-Ranges: bytes\r\n";
+    response += "Connection: ";
+    response += getHeader("Connection") == "keep-alive" ? "keep-alive\r\n\r\n" : "close\r\n\r\n";
+    response += body;
+    return response;
 }
 
 std::string Http::cgiHandler()

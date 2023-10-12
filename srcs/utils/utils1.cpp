@@ -198,8 +198,36 @@ std::string   Utils::basicError(std::pair<int, std::string> const & infos)
 
 bool    Utils::canAccessfile(std::string const & path)
 {
-    int     fd = open(path.c_str(), O_RDONLY);
-    bool    tmp = fd != -1;
-    close(fd);
-    return tmp;
+    return  access(path.c_str(), R_OK) != -1;
+}
+
+int    Utils::definePath(std::string const & path)
+{
+    struct stat statbuf = {};
+    stat(path.c_str(), &statbuf);
+
+    if (S_ISREG(statbuf.st_mode))
+        return file;
+    if (S_ISDIR(statbuf.st_mode))
+        return dir;
+    return none;
+}
+
+std::string Utils::findIndex(std::string & path, t_conf_map const & conf)
+{
+    if (conf.find("index") == conf.end())
+        return "nothing";
+    std::vector<std::string> const & index = conf.at("index");
+    for (std::vector<std::string>::const_iterator it = index.begin(); it != index.end(); it++)
+    {
+        std::string newPath (path + *it);
+        if (definePath(newPath) == file)
+        {
+            if (canAccessfile(newPath))
+                return newPath;
+            else
+                return "nothing";
+        }
+    }
+    return "nothing";
 }

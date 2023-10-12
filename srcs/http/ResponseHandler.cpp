@@ -190,39 +190,35 @@ std::string const Http::methodGetHandler()
 	}
 	//basic case
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
-	if (Utils::canAccessfile(fullPath))
-	{
-		//code quand fichier ok
-	}
-	else if (Utils::isDir(fullPath))
-	{
-		//code dossier
-	}
-	else
-		//erruer
-    if (fullPath.back() == '/')
-	{
-        //TODO : FIND GOOD INDEX : this->_config.find("index")
-        if (Utils::canAccessfile(this->_ctrlData[1] + "index.html"))
-            this->_ctrlData[1] += "index.html";
-		else if(this->_config.find("autoindex") != this->_config.end() && this->_config.at("autoindex")[0] == "on")
-		{
-            DIR * dir = opendir(fullPath.c_str());
-            if (!dir) //TODO: changer type error
-                return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found\r\n"));
-            return this->generateAutoIndex(dir, this->_ctrlData[1]);
-		}
-        else //TODO: changer type error
-            return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found\r\n"));
-	}
-    int fd = open(fullPath.c_str(), O_RDONLY);
-    if (fd != -1)
+    // check si cest un fichier
+	if (Utils::definePath(fullPath) == file)
     {
-        close (fd);
-        return this->fullResponse(fullPath.c_str(), Utils::fileToString(fullPath, status), status);
+        if (Utils::canAccessfile(fullPath))
+            return this->fullResponse(fullPath.c_str(), Utils::fileToString(fullPath, status), status);
+        return generateResponse(std::pair<int, std::string> (403, "HTTP/1.1 403 Forbidden\r\n"));
     }
-    else
-        return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found\r\n"));
+    //check si cest un dossier
+	else if (Utils::definePath(fullPath) == dir)
+	{
+        std::string newPath = Utils::findIndex(fullPath, this->_config);
+        // si un fichier index trouve et lisible
+        if (newPath != "nothing")
+            return this->fullResponse(newPath.c_str(), Utils::fileToString(fullPath, status), status);
+        //check si auto-index
+        else if(this->_config.find("autoindex") != this->_config.end() && this->_config.at("autoindex")[0] == "on")
+        {
+            DIR * dir = opendir(fullPath.c_str());
+            if (!dir)
+                return generateResponse(std::pair<int, std::string> (403, "HTTP/1.1 403 Forbidden\r\n"));
+            return this->generateAutoIndex(dir, this->_ctrlData[1]);
+        }
+        //pas index
+        else
+            return generateResponse(std::pair<int, std::string> (403, "HTTP/1.1 403 Forbidden\r\n"));
+	}
+    //ne pas acceder en tant que fichier ou dossier
+	else
+        return generateResponse(std::pair<int, std::string> (418, "418 I'm a teapot\r\n"));
 }
 
 
@@ -325,7 +321,7 @@ std::string Http::cgiHandler()
 		char * envi[envSize + 1];
 		for(size_t i = 0; i < envSize; i++)
 			envi[i] = const_cast<char *>(this->_cgiEnv[i].c_str());
-		envi[envSize] = nullptr;
+		envi[envSize] = NULL;
 		std::string filePath = this->_config["root"][0].substr(0, this->_config["root"][0].size()-1) + this->_ctrlData[1];
 
         /////////////////////////////////////////////////TODO: CHECK JOB

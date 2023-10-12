@@ -3,6 +3,8 @@
 
 #include "Includer.hpp"
 
+typedef std::map<std::string, std::vector<std::string> > t_conf_map;
+
 class Utils {
 public:
     static std::vector<int> vecStoI(std::vector<std::string> input);
@@ -28,6 +30,12 @@ public:
     static std::string   basicError(std::pair<int, std::string> const & infos);
 
     static bool                    canAccessfile(std::string const & path);
+
+    static bool                    isDir(std::string const & path);
+
+    static int                      definePath(std::string const & path);
+
+    static std::string              findIndex(std::string & path, t_conf_map const & conf);
 
     template<typename T>
     static std::string itos(T value)

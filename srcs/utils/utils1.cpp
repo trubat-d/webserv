@@ -185,17 +185,21 @@ std::string   Utils::basicError(std::pair<int, std::string> const & infos)
 {
     std::string body(basicHTML(infos));
     std::string tmp;
-    std::stringstream ss;
 
-    ss.clear();
-    tmp += infos.second;
+    tmp += infos.second.substr(10);
     tmp += "Data: " + Utils::getTime(0) + "\r\n";
     tmp += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
     tmp += "Connection: close\r\n";
     tmp += "Content-Type: text/html; charset=utf-8\r\n";
-    ss << body.size();
-    tmp += "Content-Length: " + ss.str() + "\r\n";
-    tmp += "\r\n";
+    tmp += "Content-Length: " + itos(body.size()) + "\r\n\r\n";
     tmp += body;
+    return tmp;
+}
+
+bool    Utils::canAccessfile(std::string const & path)
+{
+    int     fd = open(path.c_str(), O_RDONLY);
+    bool    tmp = fd != -1;
+    close(fd);
     return tmp;
 }

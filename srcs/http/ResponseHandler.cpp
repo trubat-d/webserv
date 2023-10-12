@@ -255,7 +255,7 @@ std::string Http::generateAutoIndex(DIR * dir, std::string const & path) const
     body += "<!DOCTYPE html>\n<html>\n<body>\n<h1>Auto-Index</h1>\n";
     for (std::vector<std::string>::iterator it = filesName.begin(); it != filesName.end(); it++)
     {
-        body += "<p><a href=\"http://localhost:80" + path + *it + "\">";
+        body += "<p><a href=\"http://" + this->_masterSocketInfo.host + Utils::itos(this->_masterSocketInfo.masterPort) + path + *it + "\">";
         body += *it;
         body += "</a></p>\n";
     }

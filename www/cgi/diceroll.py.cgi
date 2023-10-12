@@ -5,11 +5,15 @@ seed_data = os.urandom(16)
 seed = int.from_bytes(seed_data, 'big')
 random.seed(seed)
 
+
+query = os.environ["QUERY_STRING"]
+
 content_length = 0
 separator = "\r\n"
 body = f"""<html>
     <body>
-        <h1>Here is the seed : {seed}</h1>
+        <h1>Click here to generate a Random Value</h1>
+        <a href=\"/cgi/diceroll.py.php?key={int(random.random() * 10000000000000)}\"><button>Click Me !</button></a>
     </body>
 </html>
 """

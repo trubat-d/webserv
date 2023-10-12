@@ -143,7 +143,7 @@ void	Socket::addSocket(int index)
 	info->masterPort = ntohs(sockAddr.sin_port);
     if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, NULL, NI_MAXSERV, NI_NUMERICSERV))
         return ;
-    std::string tmp(host, NI_MAXHOST);
+    std::string tmp(host);
     info->host = tmp;
 	EV_SET(&newClient, newSocket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, info);
 	if (kevent(this->getKqueue(), &newClient, 1, NULL, 0, NULL) != -1)

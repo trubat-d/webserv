@@ -161,7 +161,7 @@ std::string const Http::fullResponse(std::string const & path, std::string const
     }
     response += "\r\n";
     response += body;
-	std::cout << response << std::endl;
+//	std::cout << response << std::endl;
     return response;
 }
 
@@ -190,6 +190,16 @@ std::string const Http::methodGetHandler()
 	}
 	//basic case
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
+	if (Utils::canAccessfile(fullPath))
+	{
+		//code quand fichier ok
+	}
+	else if (Utils::isDir(fullPath))
+	{
+		//code dossier
+	}
+	else
+		//erruer
     if (fullPath.back() == '/')
 	{
         //TODO : FIND GOOD INDEX : this->_config.find("index")
@@ -271,7 +281,7 @@ std::string Http::generateAutoIndex(DIR * dir, std::string const & path) const
     body += "<!DOCTYPE html>\n<html>\n<body>\n<h1>Auto-Index</h1>\n";
     for (std::vector<std::string>::iterator it = filesName.begin(); it != filesName.end(); it++)
     {
-        body += "<p><a href=\"http://" + this->_masterSocketInfo.host + Utils::itos(this->_masterSocketInfo.masterPort) + path + *it + "\">";
+        body += "<p><a href=\"http://" + this->_config.at("server_name")[0] + path + *it + "\">";
         body += *it;
         body += "</a></p>\n";
     }
@@ -286,6 +296,7 @@ std::string Http::generateAutoIndex(DIR * dir, std::string const & path) const
     response += "Connection: ";
     response += getHeader("Connection") == "keep-alive" ? "keep-alive\r\n\r\n" : "close\r\n\r\n";
     response += body;
+	std::cout << response << std::endl;
     return response;
 }
 

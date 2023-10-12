@@ -148,7 +148,7 @@ std::string Utils::internalServerError(std::pair<int, std::string> & infos)
 
 std::string Utils::basicHTML(std::pair<int, std::string> const & infos)
 {
-    return "<!DOCTYPE html>\n<html>\n<head>\n<title>" + Utils::itos<int>(infos.first) + "</title>\n</head>\n<body>\n<p>" + infos.second+ "</p>\n</body>\n</html>";
+    return "<!DOCTYPE html>\n<html>\n<head>\n<title>" + Utils::itos<int>(infos.first) + "</title>\n</head>\n<body>\n<p>" + infos.second.substr(9) + "</p>\n</body>\n</html>";
 }
 
 int        Utils::removeSocket(int kq, struct kevent * socket, int nfilter, int * filter, int flags, std::map<int, std::string>& receive, std::map<int, std::string>& send)

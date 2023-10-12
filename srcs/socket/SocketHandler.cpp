@@ -215,7 +215,6 @@ int    Socket::processSocket(struct kevent & socket, std::string & request, std:
         if (client.parseRequest())
         {
             //DEFINE SI REQUEST OK WITH .CONF
-			std::cout << client.getBody() << std::endl;
             res = client.processRequest(*this->_configHead);
             //SET CGI ENV
             if (res.first == 200)

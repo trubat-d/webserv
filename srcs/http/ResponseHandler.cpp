@@ -190,6 +190,7 @@ std::string const Http::methodGetHandler()
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
     if (fullPath.back() == '/')
 	{
+        //TODO : FIND GOOD INDEX : this->_config.find("index")
         if (Utils::canAccessfile(this->_ctrlData[1] + "index.html"))
             this->_ctrlData[1] += "index.html";
 		else if(this->_config.find("autoindex") != this->_config.end() && this->_config.at("autoindex")[0] == "on")
@@ -249,6 +250,7 @@ std::string Http::generateAutoIndex(DIR * dir, std::string const & path) const
         filesName.push_back(ent->d_name);
     closedir (dir);
     std::string tmp;
+    //TODO rajouter headers
     tmp += "<!DOCTYPE html>\n<html>\n<body>\n<h1>Auto-Index</h1>\n<p>";
     for (std::vector<std::string>::iterator it = filesName.begin(); it != filesName.end(); it++)
     {
@@ -297,15 +299,18 @@ std::string Http::cgiHandler()
         /////////////////////////////////////////////////TODO: CHECK JOB
         std::string script2;
         size_t merde;
-        std::string bouh = ".php-cgi.";
+        std::string bouh = ".php.cgi";
         merde = this->_ctrlData[1].find(bouh);
         if (merde == std::string::npos)
         {
             bouh = ".py.";
-            merde = this->_ctrlData[1].find(".py.");
+            merde = this->_ctrlData[1].find(".py.cgi");
         }
         if (merde == std::string::npos)
             exit (-1);
+        bouh.erase(0, 1);
+        for (int i = 0; i < 4; i++)
+            bouh.pop_back();
         std::vector<std::string>::iterator where = std::find(this->_config.at("cgi").begin(), this->_config.at("cgi").end(), bouh);
         if (where != this->_config.at("cgi").end())
             script2 = *(where+1);
@@ -313,7 +318,8 @@ std::string Http::cgiHandler()
             exit(-1);
         /////////////////////////////////////////////////
 
-		//std::string script = std::string("/System/Volumes/Data/mnt/sgoinfre/php-cgi");
+		//path php cgi /System/Volumes/Data/mnt/sgoinfre/php-cgi
+        //path python: python3
         char * args[3] = { const_cast<char*>(script2.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
 		if (execve(const_cast<char *>(script2.c_str()), args, envi) == -1)
 		{

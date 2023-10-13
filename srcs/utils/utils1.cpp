@@ -142,7 +142,7 @@ std::string  Utils::fileToString(std::string & fullPath, std::pair<int, std::str
 std::string Utils::internalServerError(std::pair<int, std::string> & infos)
 {
     infos.first = 500;
-    infos.second = "HTTP/1.1 500 Internal Server Error";
+    infos.second = "HTTP/1.1 500 Internal Server Error\r\n";
     return "";
 }
 

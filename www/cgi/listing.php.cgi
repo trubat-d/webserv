@@ -47,6 +47,7 @@ ob_start();
 <?php
     $output = ob_get_clean();
     $content_length = strlen($output);
+    header("Status: 200 OK");
     header("Content-Length: $content_length");
     echo $output;
 ?>

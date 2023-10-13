@@ -6,18 +6,19 @@
         if ($filename) {
             $filePath = "../upload/" . $filename;
             if (file_exists($filePath)) {
-                unlink($filePath); // Delete the file
+                unlink($filePath);
                 echo json_encode(["message" => "File deleted successfully"]);
+                header("Status: 200 OK");
             } else {
-                http_response_code(404);
+                header("Status: 404 File Not Found");
                 echo json_encode(["message" => "File not found"]);
             }
         } else {
-            http_response_code(400);
+            header("Status: 400 Bad Request");
             echo json_encode(["message" => "Filename is not set"]);
         }
     } else {
-        http_response_code(405);
+        header("Status: 405 Method Not Allowed");
         echo json_encode(["message" => "Invalid request method"]);
     }
     $output = ob_get_clean();

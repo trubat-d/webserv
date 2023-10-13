@@ -41,7 +41,7 @@ std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
         return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	tmp = host;
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// TODO: DELETE WHEN OTHER DONE
-	this->_cgiEnv.push_back(("SERVER_NAME=" + tmp)); // server hostname or IP address //TODO: get from .conf
+//	this->_cgiEnv.push_back(("SERVER_NAME=" + tmp)); // server hostname or IP address //TODO: get from .conf
 	ss.clear();
 	ss << this->_masterSocketInfo.masterPort;
 	ss >> tmp;
@@ -63,13 +63,13 @@ std::string Http::getHeader(std::string const & key) const
 
 std::pair<int, std::string>	Http::processRequest(Parser &config)
 {
-	this->_config = config.getServerConfig(getHeader("Host"), std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
+	this->_config = config.getServerConfig(this->_masterSocketInfo.client_host, std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
     if(this->_config.find("deny") != this->_config.end() && !this->_config.at("deny").empty())
     {
         if(std::find(this->_config.at("deny").begin(), this->_config.at("deny").end(),this->_ctrlData[0]) != this->_config.at("deny").end())
             return std::pair<int, std::string>(405, "HTTP/1.1 405 Method Not Allowed\r\n");
     }
-	if(this->_ctrlData[1].size() > static_cast<size_t>(std::atol(this->_config.at("uri_max_size")[0].c_str())))
+	if(this->_config.find("uri_max_size") != this->_config.end() && this->_ctrlData[1].size() > static_cast<size_t>(std::atol(this->_config.at("uri_max_size")[0].c_str())))
 		return std::pair<int, std::string>(414, "HTTP/1.1 414 URI Too Long\r\n");
 	if(this->_ctrlData[2] != "HTTP/1.1")
 		return std::pair<int, std::string>(505, "HTTP/1.1 505 HTTP Version Not Supported\r\n");
@@ -190,6 +190,8 @@ std::string const Http::methodGetHandler()
 				this->_ctrlData[1].erase(pos + 4, _ctrlData[1].size() - pos - 4);
 			}
 		}
+		if(this->_config.find("server_name") != this->_config.end() && !this->_config.at("server_name").empty())
+			this->_cgiEnv.push_back(("SERVER_NAME=" + this->_config.at("server_name")[0]));
 		return this->cgiHandler();
 	}
 	//basic case
@@ -266,13 +268,15 @@ std::string const Http::getMimeType(std::string path)
 //    return response;
 //}
 
-std::string Http::generateAutoIndex(DIR * dir, std::string const & path) const
+std::string Http::generateAutoIndex(DIR * dir, std::string path) const
 {
     struct dirent *ent;
     std::string response;
     std::string body;
     std::vector<std::string> filesName;
 
+	if(path.back() != '/')
+		path.push_back('/');
     while ((ent = readdir(dir)) != NULL)
         filesName.push_back(ent->d_name);
     closedir (dir);
@@ -392,11 +396,9 @@ std::string Http::cgiHandler()
     else if (status)
         return "502 Bad Gateway\r\n";
     ssize_t size = read(fd[0], buffer, 1023);
-	std::string temp_s(buffer, size);
-	response += temp_s;
 	if (size == -1)
 		return "502 Bad Gateway\r\n";
-	while (size == 1023)
+	while (size >= 1023)
 	{
 		buffer[size] = 0;
 		std::string temp(buffer, size);
@@ -405,8 +407,35 @@ std::string Http::cgiHandler()
 		if (size == -1)
 			return "502 Bad Gateway\r\n";
 	}
+	if (size > 0)
+	{
+		std::string temp_s(buffer, size);
+		response += temp_s;
+	}
+
 	close (fd[0]);
-	return "HTTP/1.1 200 OK\r\n" + response;
+	std::cout << "pre resp ->" << response << std::endl;
+	return processResponse(response);
+}
+
+std::string Http::processResponse(std::string str)
+{
+	std::string status = "";
+	const std::string target = "Status:";
+	size_t startPos = str.find(target);
+	if (startPos != std::string::npos) {
+		size_t valueStart = startPos + target.size();
+		size_t endPos = str.find("\r\n", valueStart);
+		if (endPos != std::string::npos) {
+			status = str.substr(valueStart, endPos - valueStart);
+			std::cout << "Status : [" <<  status << "]" << std::endl;
+			str.erase(startPos, endPos - startPos + 2);
+		}
+	}
+	status = "HTTP/1.1" + status;
+	str = status + "\r\n" + str;
+	std::cout << "post  resp ->" << str << std::endl;
+	return str;
 }
 
 std::string Http::generateResponse(std::pair<int, std::string> res)

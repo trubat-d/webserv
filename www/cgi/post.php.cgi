@@ -24,20 +24,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
         $end_name = $files['name'][$i];
         echo "<p>Uploading file : $end_name </p>";
         $result = move_uploaded_file($files['tmp_name'][$i], "$upload_dir$end_name");
+        if($end_name["size"][$i] > 2097152) {
+            echo "<p>The file is larger than 2MB</p>";
+            header("Status: 500 Internal Server Error");
+            break;
+        }
         if($result)
+        {
             echo "<p>File $end_name saved</p>";
+            header("Status: 201 Created");
+        }
         else
         {
             echo "<p>Error Saving the file</p>";
-            header("HTTP/1.1 500 Internal Server Error");
+            header("Status: 500 Internal Server Error");
+            break;
         }
         if(in_array(pathinfo($_FILES['userfile']['name'][$i])['extension'], $valid_image))
         {
             echo "<img src='$upload_dir$end_name'>";
         }
     }
-
-
 }
 ?>
 </html>

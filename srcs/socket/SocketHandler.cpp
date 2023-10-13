@@ -141,7 +141,7 @@ void	Socket::addSocket(int index)
 	if (getsockname(this->_socket.at(index), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
 		return ;
 	info->masterPort = ntohs(sockAddr.sin_port);
-    if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, NULL, NI_MAXSERV, NI_NUMERICSERV))
+    if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, NULL, 0, NI_NUMERICSERV))
         return ;
     std::string tmp(host);
     info->host = tmp;

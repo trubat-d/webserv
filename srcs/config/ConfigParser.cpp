@@ -237,7 +237,6 @@ void Parser::join_map(t_conf_map & map1, t_conf_map & map2) const
 	{
 		if(map1.find(it->first) == map1.end())
 		{
-
             if(it->first == "allow")
             {
                 if(map1.find("deny") != map1.end())
@@ -268,6 +267,10 @@ void Parser::join_map(t_conf_map & map1, t_conf_map & map2) const
             }
 			map1[it->first] = it->second;
 		}
+		else
+		{
+			map1.at(it->first) = map2.at(it->first);
+		}
 	}
 }
 
@@ -283,6 +286,11 @@ void Parser::getPorts(std::vector<std::string> &storage, t_node* last_loc)
             {
                 storage.push_back(last_loc->config.at("listen")[i]);
             }
+			else
+			{
+				storage.clear();
+				return ;
+			}
         }
     }
 	for (size_t i = 0; i < last_loc->branches.size(); i++)
@@ -325,7 +333,7 @@ bool Parser::method_error_checker(t_node &head) const
 	{
 		for(size_t i = 0; i < head.branches.size(); i++)
 		{
-			std::cout << head.branches[i]->title << std::endl;
+//			std::cout << head.branches[i]->title << std::endl;
 			val = val && method_error_checker(*head.branches[i]);
 		}
 	}

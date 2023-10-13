@@ -72,7 +72,7 @@ std::pair<int, std::string>	Http::processRequest(Parser &config)
         if(std::find(this->_config.at("deny").begin(), this->_config.at("deny").end(),this->_ctrlData[0]) != this->_config.at("deny").end())
             return std::pair<int, std::string>(405, "HTTP/1.1 405 Method Not Allowed\r\n");
     }
-	if(this->_ctrlData[1].size() > static_cast<size_t>(std::atol(this->_config.at("uri_max_size")[0].c_str())))
+	if(this->_config.find("uri_max_size") != this->_config.end() && this->_ctrlData[1].size() > static_cast<size_t>(std::atol(this->_config.at("uri_max_size")[0].c_str())))
 		return std::pair<int, std::string>(414, "HTTP/1.1 414 URI Too Long\r\n");
 	if(this->_ctrlData[2] != "HTTP/1.1")
 		return std::pair<int, std::string>(505, "HTTP/1.1 505 HTTP Version Not Supported\r\n");
@@ -190,39 +190,35 @@ std::string const Http::methodGetHandler()
 	}
 	//basic case
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
-//	if (Utils::canAccessfile(fullPath))
-//	{
-//		//code quand fichier ok
-//	}
-//	else if (Utils::isDir(fullPath))
-//	{
-//		//code dossier
-//	}
-//	else
-//		//erruer
-    if (fullPath.back() == '/')
-	{
-        //TODO : FIND GOOD INDEX : this->_config.find("index")
-        if (Utils::canAccessfile(this->_ctrlData[1] + "index.html"))
-            this->_ctrlData[1] += "index.html";
-		else if(this->_config.find("autoindex") != this->_config.end() && this->_config.at("autoindex")[0] == "on")
-		{
-            DIR * dir = opendir(fullPath.c_str());
-            if (!dir) //TODO: changer type error
-                return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found\r\n"));
-            return this->generateAutoIndex(dir, this->_ctrlData[1]);
-		}
-        else //TODO: changer type error
-            return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found\r\n"));
-	}
-    int fd = open(fullPath.c_str(), O_RDONLY);
-    if (fd != -1)
+    // check si cest un fichier
+	if (Utils::definePath(fullPath) == file)
     {
-        close (fd);
-        return this->fullResponse(fullPath.c_str(), Utils::fileToString(fullPath, status), status);
+        if (Utils::canAccessfile(fullPath))
+            return this->fullResponse(fullPath.c_str(), Utils::fileToString(fullPath, status), status);
+        return generateResponse(std::pair<int, std::string> (403, "HTTP/1.1 403 Forbidden\r\n"));
     }
-    else
-        return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 File Not Found\r\n"));
+    //check si cest un dossier
+	else if (Utils::definePath(fullPath) == dir)
+	{
+        std::string newPath = Utils::findIndex(fullPath, this->_config);
+        // si un fichier index trouve et lisible
+        if (newPath != "nothing")
+            return this->fullResponse(newPath.c_str(), Utils::fileToString(newPath, status), status);
+        //check si auto-index
+        else if(this->_config.find("autoindex") != this->_config.end() && this->_config.at("autoindex")[0] == "on")
+        {
+            DIR * dir = opendir(fullPath.c_str());
+            if (!dir)
+                return generateResponse(std::pair<int, std::string> (403, "HTTP/1.1 403 Forbidden\r\n"));
+            return this->generateAutoIndex(dir, this->_ctrlData[1]);
+        }
+        //pas index
+        else
+            return generateResponse(std::pair<int, std::string> (403, "HTTP/1.1 403 Forbidden\r\n"));
+	}
+    //ne pas acceder en tant que fichier ou dossier
+	else
+        return generateResponse(std::pair<int, std::string> (418, "418 I'm a teapot\r\n"));
 }
 
 
@@ -267,13 +263,15 @@ std::string const Http::getMimeType(std::string path)
 //    return response;
 //}
 
-std::string Http::generateAutoIndex(DIR * dir, std::string const & path) const
+std::string Http::generateAutoIndex(DIR * dir, std::string path) const
 {
     struct dirent *ent;
     std::string response;
     std::string body;
     std::vector<std::string> filesName;
 
+	if(path.back() != '/')
+		path.push_back('/');
     while ((ent = readdir(dir)) != NULL)
         filesName.push_back(ent->d_name);
     closedir (dir);
@@ -325,7 +323,7 @@ std::string Http::cgiHandler()
 		char * envi[envSize + 1];
 		for(size_t i = 0; i < envSize; i++)
 			envi[i] = const_cast<char *>(this->_cgiEnv[i].c_str());
-		envi[envSize] = nullptr;
+		envi[envSize] = NULL;
 		std::string filePath = this->_config["root"][0].substr(0, this->_config["root"][0].size()-1) + this->_ctrlData[1];
 
         /////////////////////////////////////////////////TODO: CHECK JOB
@@ -395,26 +393,44 @@ std::string Http::cgiHandler()
 	ssize_t size = read(fd[0], buffer, 1023);
 	if (size == -1)
 		return "502 Bad Gateway\r\n";
-	if(size == 1023)
+	while (size >= 1023)
 	{
-		while (size == 1023)
-		{
-			buffer[size] = 0;
-			std::string temp(buffer, size);
-			response += temp;
-			size = read(fd[0], buffer, 1023);
-			if (size == -1)
-				return "502 Bad Gateway\r\n";
-		}
+		buffer[size] = 0;
+		std::string temp(buffer, size);
+		response += temp;
+		size = read(fd[0], buffer, 1023);
+		if (size == -1)
+			return "502 Bad Gateway\r\n";
 	}
-	else
+	if (size > 0)
 	{
 		std::string temp_s(buffer, size);
 		response += temp_s;
 	}
 
 	close (fd[0]);
-	return "HTTP/1.1 200 OK\r\n" + response;
+	std::cout << "pre resp ->" << response << std::endl;
+	return processResponse(response);
+}
+
+std::string Http::processResponse(std::string str)
+{
+	std::string status = "";
+	const std::string target = "Status:";
+	size_t startPos = str.find(target);
+	if (startPos != std::string::npos) {
+		size_t valueStart = startPos + target.size();
+		size_t endPos = str.find("\r\n", valueStart);
+		if (endPos != std::string::npos) {
+			status = str.substr(valueStart, endPos - valueStart);
+			std::cout << "Status : [" <<  status << "]" << std::endl;
+			str.erase(startPos, endPos - startPos + 2);
+		}
+	}
+	status = "HTTP/1.1" + status;
+	str = status + "\r\n" + str;
+	std::cout << "post  resp ->" << str << std::endl;
+	return str;
 }
 
 std::string Http::generateResponse(std::pair<int, std::string> res)

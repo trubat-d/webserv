@@ -29,7 +29,7 @@ ob_start();
     <script>
         function deleteFile(filename) {
             fetch('delete.php.cgi', {
-                method: 'DELETE',.
+                method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Filename': filename,
@@ -47,6 +47,7 @@ ob_start();
 <?php
     $output = ob_get_clean();
     $content_length = strlen($output);
+    header("Status: 200 OK");
     header("Content-Length: $content_length");
     echo $output;
 ?>

@@ -12,7 +12,7 @@ content_length = 0
 separator = "\r\n"
 body = f"""<html>
     <body>
-        <h1>Env:</h1>
+        <h1>Env (Python):</h1>
         {generate_env()}
         <br><br><a href=\"/\">Return Home !</a>
     </body>

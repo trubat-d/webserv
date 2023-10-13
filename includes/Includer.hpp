@@ -43,6 +43,12 @@ typedef struct uData {
 #include "Http.hpp"
 #include "CGI.hpp"
 
+enum isWhat {
+    none = -1,
+    file = 0,
+    dir = 1,
+};
+
 class Utils;
 class Error;
 class Parser;

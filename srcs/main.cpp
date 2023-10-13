@@ -6,10 +6,14 @@ int main(int ac, char **av)
 		return 1;
 	try
 	{
-        std::cout << "Parsing config" << std::endl;
 		Parser config_parser(av[1]);
 		std::vector<std::string> storage;
 		config_parser.getPorts(storage, config_parser.getHead());
+		if(storage.empty())
+		{
+			std::cerr << "Port Error" << std::endl;
+			return 1;
+		}
 		Socket webServerSocket(Utils::vecStoI(storage), &config_parser);
 		Utils::fillMime();
 		webServerSocket.run();

@@ -49,7 +49,7 @@ public:
     std::string const methodGetHandler();
     std::string const notCorrectMethodHandler();
     std::string const fullResponse(std::string const & path, std::string const & body, std::pair<int, std::string> & infos);
-    std::string generateAutoIndex(DIR * dir, std::string const & path) const;
+    std::string generateAutoIndex(DIR * dir, std::string path) const;
     std::string cgiHandler();
     std::string const getMimeType(std::string path);
 
@@ -69,6 +69,7 @@ private:
     t_conf_map		                    _config;
     std::vector<std::string>		    _cgiEnv;
     uDada				                _masterSocketInfo;
+	std::string processResponse(std::string str);
 };
 ///////////////////////////////////////////////////////////////////////
 

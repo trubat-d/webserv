@@ -54,6 +54,7 @@ private:
 	std::map<int, std::string>	_rcv;
 	std::map<int, std::string>	_snd;
 	Parser						*_configHead;
+    std::map<uintptr_t, bool>         _mapConnect; //true = keep-alive // false = close
 };
 
 #endif

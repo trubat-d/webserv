@@ -43,7 +43,7 @@ public:
 
     std::pair<int, std::string>	processRequest(Parser &config);
     bool						validateBodySize(std::string &bodySize);
-    std::pair<int, std::string> setCGIEnv(struct kevent & socket);
+    std::pair<int, std::string> setCGIEnv();
     std::string					generateResponse(std::pair<int, std::string> res);
 
     std::string const methodGetHandler();
@@ -52,6 +52,7 @@ public:
     std::string generateAutoIndex(DIR * dir, std::string path) const;
     std::string cgiHandler();
     std::string const getMimeType(std::string path);
+    std::string processResponse(std::string str);
 
 ///////////////////////////////////////////////////////////////////////
 
@@ -69,7 +70,7 @@ private:
     t_conf_map		                    _config;
     std::vector<std::string>		    _cgiEnv;
     uDada				                _masterSocketInfo;
-	std::string processResponse(std::string str);
+
 };
 ///////////////////////////////////////////////////////////////////////
 

@@ -30,9 +30,9 @@
 
 
 typedef struct uData {
-    int     masterSocket;
-    int     masterPort;
-    bool    connection;
+    //int     masterSocket;
+    //int     masterPort;
+    std::string   masterPort;
     std::string   client_host;
     std::string   client_addr;
 } uDada;

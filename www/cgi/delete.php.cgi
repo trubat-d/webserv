@@ -10,7 +10,7 @@
                 echo json_encode(["message" => "File deleted successfully"]);
                 header("Status: 200 OK");
             } else {
-                header("Status: 404 File Not Found");
+                header("Status: 404 Not Found");
                 echo json_encode(["message" => "File not found"]);
             }
         } else {

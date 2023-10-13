@@ -4,10 +4,22 @@ Http::Http() {} /*_request((std::string &) "")*/
 
 Http::Http(std::string & request, struct kevent & socket): _request(request)
 {
-    if (socket.udata)
-        this->_masterSocketInfo = * reinterpret_cast<uDada *>(socket.udata);
-    else
-        bzero(&this->_masterSocketInfo, sizeof(uDada));
+    struct sockaddr_in	sockAddr = {};
+    socklen_t len = sizeof(sockAddr);
+    char    host[NI_MAXHOST];
+    char service[NI_MAXSERV];
+
+    if (getsockname(static_cast<int>(socket.ident) , reinterpret_cast <struct sockaddr *> (&sockAddr), &len) != -1)
+    {
+        if (!getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
+        {
+            this->_masterSocketInfo.client_host = host;
+            this->_masterSocketInfo.masterPort = service;
+        }
+        bzero(host, NI_MAXHOST);
+        if (!getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICHOST))
+            this->_masterSocketInfo.client_addr = host;
+    }
 }
 
 Http::Http(const Http & instance)
@@ -70,7 +82,7 @@ void	Http::setBody(std::string const & body)
 	this->_body = body;
 }
 
-/////////////////////////////////PARSING//////////////////////////////////////////////////
+/////////////////////////////////PARSING/////////////////////////////////////////////////
 
 bool	Http::parseRequest()
 {
@@ -124,7 +136,7 @@ bool	Http::parseRequest()
 //
 //	std::cout << "test map" << std::endl;
 //	for (ite = this->_headers.begin(); ite != this->_headers.end(); ite++)
-//		std::cout << "[" << ite->first << "]" << " " << "[" << ite->second << "]" << std::endl;
+//		std::cout << "[" <passed< ite->first << "]" << " " << "[" << ite->second << "]" << std::endl;
 //
 //	std::cout << "test body :" << "[" << this->_body << "]" << std::endl;
 //}

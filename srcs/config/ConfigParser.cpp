@@ -59,6 +59,7 @@ std::vector<std::string> *configOptionsGen()
 	config_options->push_back("autoindex");
 	config_options->push_back("uri_max_size");
 	config_options->push_back("cgi");
+	config_options->push_back("redirect");
 	return config_options;
 }
 

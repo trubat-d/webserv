@@ -202,7 +202,7 @@ std::string const Http::methodGetHandler()
         std::string newPath = Utils::findIndex(fullPath, this->_config);
         // si un fichier index trouve et lisible
         if (newPath != "nothing")
-            return this->fullResponse(newPath, Utils::fileToString(fullPath, status), status);
+            return this->fullResponse(newPath, Utils::fileToString(newPath, status), status);
         //check si auto-index
         else if(this->_config.find("autoindex") != this->_config.end() && this->_config.at("autoindex")[0] == "on")
         {

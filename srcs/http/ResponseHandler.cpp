@@ -140,7 +140,15 @@ std::string const Http::fullResponse(std::string const & path, std::string const
     if (path.empty())
         return Utils::basicError(infos);
     (void) stat(path.c_str(), &fileInfos);
-	response += infos.second;
+    //TODO check redirection
+    t_conf_map::iterator map_it = this->_config.find("redirect");
+    if (map_it != this->_config.end())
+    {
+        response += "HTTP/1.1 302 FOUND";
+        response += "Location: " + map_it->second[0] + "\r\n";
+    }
+    else
+	    response += infos.second;
     response += "Date: " + Utils::getTime(0) + "\r\n";
     response += "Content-Type: "  + getMimeType(path) + "\r\n";
     response += "Content-Length: " + Utils::itos(body.size()) + "\r\n";
@@ -158,7 +166,6 @@ std::string const Http::fullResponse(std::string const & path, std::string const
     }
     response += "\r\n";
     response += body;
-//	std::cout << response << std::endl;
     return response;
 }
 

@@ -4,7 +4,10 @@ Http::Http() {} /*_request((std::string &) "")*/
 
 Http::Http(std::string & request, struct kevent & socket): _request(request)
 {
-    this->_masterSocketInfo = * reinterpret_cast<uDada *>(socket.udata);
+    if (socket.udata)
+        this->_masterSocketInfo = * reinterpret_cast<uDada *>(socket.udata);
+    else
+        bzero(&this->_masterSocketInfo, sizeof(uDada));
 }
 
 Http::Http(const Http & instance)

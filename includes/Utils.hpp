@@ -23,7 +23,7 @@ public:
 
     static std::string basicHTML(std::pair<int, std::string> const &infos);
 
-    static int         removeSocket(int kq, struct kevent * socket, int nfilter, int * filter, int flags, std::map<int, std::string>& receive, std::map<int, std::string>& send);
+    static int         removeSocket(int kq, struct kevent & socket, int nfilter, int * filter, int flags, std::map<int, std::string>& receive, std::map<int, std::string>& send);
 
     static bool    timer(const std::clock_t start);
 
@@ -36,6 +36,8 @@ public:
     static int                      definePath(std::string const & path);
 
     static std::string              findIndex(std::string & path, t_conf_map const & conf);
+
+    static void                     testGetName(int fd, std::string const & context);
 
     template<typename T>
     static std::string itos(T value)

@@ -129,30 +129,55 @@ void	Socket::addSocket(int index)
 	socklen_t len = sizeof(sockAddr);
     char host[NI_MAXHOST];
 
-
 	newSocket = accept(this->_socket.at(index), NULL, NULL);
 	if (newSocket < 0)
 		return ;
 	if (fcntl(newSocket, F_SETFL, O_NONBLOCK) == -1)
 		return ;
-	info = new uDada;
-	info->masterSocket = this->_socket.at(index);
-    info->connection = false;
-	if (getsockname(this->_socket.at(index), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
-		return ;
-	info->masterPort = ntohs(sockAddr.sin_port);
-    if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, NULL, 0, NI_NUMERICSERV))
-        return ;
-    std::string tmp(host);
-    info->host = tmp;
+	try {
+        info = new uDada;
+        //PROVIDES PASSIVE SOCKET VALUE
+        info->masterSocket = this->_socket.at(index);
+        //CONNECTION: CLOSE DEFAULT STATE
+        info->connection = false;
+        //HOST PORT
+        if (getsockname(this->_socket.at(index), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
+            return;
+        info->masterPort = ntohs(sockAddr.sin_port);
+        //GET ACTUAL SOCKET HOSTNAME
+        bzero(&sockAddr, len);
+        if(getsockname(newSocket, reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
+            return;
+        if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), len, host, NI_MAXHOST, NULL, 0, NI_NUMERICSERV))
+            return;
+        std::string tmp(host);
+        info->client_host = tmp;
+        //GET ACTUAL SOCKET IP ADDR
+        bzero(host, NI_MAXHOST);
+        getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+        info->client_addr = tmp;
+    }
+    catch (std::bad_alloc::exception & e) {
+        info = NULL;
+        std::cerr << e.what() << std::endl;
+    }
 	EV_SET(&newClient, newSocket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, info);
-	if (kevent(this->getKqueue(), &newClient, 1, NULL, 0, NULL) != -1)
+    //CHECK IF CORRECTLY PUT IN KQUEUE
+    if (kevent(this->getKqueue(), &newClient, 1, NULL, 0, NULL) != -1)
     {
         this->_rcv.insert(std::pair<int, std::string>(newSocket, ""));
 	    this->_snd.insert(std::pair<int, std::string>(newSocket, ""));
         std::cout << "from masterSocket: " << this->_socket.at(index) << "on port: " << info->masterPort << ", new socket: " << newSocket << std::endl;
     }
-	return ;
+    //ELSE DELETE NEW
+    else
+    {
+        if (info)
+        {
+            delete info;
+            info = NULL;
+        }
+    }
 }
 
 void	Socket::readSocket(struct kevent & socket)
@@ -163,13 +188,10 @@ void	Socket::readSocket(struct kevent & socket)
 	char			buffer[2048] = {};
     //SI ERREUR SUR LE SOCKET
 	if (socket.flags & EV_EOF)
-        return (void) Utils::removeSocket(this->getKqueue(), &socket, 1, (int [1]){EVFILT_READ}, EV_DELETE, this->_rcv, this->_snd);
+        return (void) Utils::removeSocket(this->getKqueue(), socket, 1, (int [1]){EVFILT_READ}, EV_DELETE, this->_rcv, this->_snd);
     //RECUPERER DANS LES 2 MAPS LES STRING CORRESPONDANT AU SOCKET
 	if ((itRcv = this->_rcv.find(static_cast <int> (socket.ident))) == this->_rcv.end() || (itSnd = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end())
-    {
-        //TODO FERMER LE SOCKET CAR PEUT PAS REPONDRE SELON CODE // OU RAJOUTER LE SOCKET DANS LIST ET REPONDRE ERREUR BASIC;
         return ;
-    }
 
     //LIRE LE SOCKET ET METTRE LE CONTENU DANS MAP RCV
 	if ((length = read(static_cast <int> (socket.ident), buffer, 2047)) == -1)
@@ -230,15 +252,22 @@ int    Socket::processSocket(struct kevent & socket, std::string & request, std:
                     reinterpret_cast<uDada *> (socket.udata)->connection = true;
             //CREATE RESPONSE
             response = client.generateResponse(res);
+            //SET CONNECTION CLOSE IF RESPONSE IS AN ERROR TODO , AMELIORER PAR MODIFIER UNE REF ET RENVOYER LE STATUS CODE
+            if (response.find("HTTP/1.1 200") == std::string::npos && response.find("HTTP/1.1 201") && response.find("HTTP/1.1 302") == std::string::npos)
+                if (socket.udata)
+                    reinterpret_cast<uDada *> (socket.udata)->connection = false;
         }
         else
             response = client.generateResponse(std::pair<int, std::string> (400, "HTTP/1.1 400 Bad Request\r\n"));
     }
-    //TODO GENERER UNE RESPONSE BASIC;
     else if (parseValue == badRequest)
-        response = Utils::basicError(std::pair<int, std::string> (400, "HTTP/1.1 400 Bad Request\r\n")); //TODO check if ok
+        response = Utils::basicError(std::pair<int, std::string> (400, "HTTP/1.1 400 Bad Request\r\n"));
     else if (parseValue == methodNotAllowed)
-        response = Utils::basicError(std::pair<int, std::string> (500, "HTTP/1.1 500 Method Not Allowed\r\n")); //TODO check if ok
+        response = Utils::basicError(std::pair<int, std::string> (500, "HTTP/1.1 500 Method Not Allowed\r\n"));
+    //SI ERREUR RESET CONNECTION TO CLOSE
+    if (parseValue == badRequest || parseValue == methodNotAllowed)
+        if (socket.udata)
+            reinterpret_cast<uDada *> (socket.udata)->connection = false;
     return parseValue;
 }
 
@@ -286,7 +315,7 @@ int     Socket::parseSocket(std::string & read, std::string & sndRequest)
         //IF CONTENT-LENGTH
         else
         {
-            size_t  startValue = read.find(":", cntLen);
+            size_t  startValue = read.find(':', cntLen);
             size_t  endValue = read.find("\r\n", cntLen);
             if (startValue == std::string::npos)
                 return badRequest;
@@ -320,7 +349,7 @@ void	Socket::writeSocket(struct kevent & socket)
 
     //IF CONNECTION LOST OR DON'T FIND IN MAP
 	if (socket.flags & EV_EOF || ((it = this->_snd.find(static_cast <int> (socket.ident))) == this->_snd.end()))
-        return (void) Utils::removeSocket(this->getKqueue(), &socket, 2, (int [2]){EVFILT_READ, EVFILT_WRITE}, EV_DELETE, this->_rcv, this->_snd);
+        return (void) Utils::removeSocket(this->getKqueue(), socket, 2, (int [2]){EVFILT_READ, EVFILT_WRITE}, EV_DELETE, this->_rcv, this->_snd);
     //WRITE INTO SOCKET
 	if ((length = write(static_cast <int> (socket.ident), it->second.data(), \
 	it->second.length() > 2047 ? 2047 : it->second.length())) != -1)
@@ -328,15 +357,13 @@ void	Socket::writeSocket(struct kevent & socket)
 
     //WRITE ERROR : DELETE TOUT || WROTE EVERYTHING & CONNECTION: CLOSE
     if (length == -1 || (it->second.empty() && !reinterpret_cast<uDada *>(socket.udata)->connection))
-        return (void) Utils::removeSocket(this->getKqueue(), &socket, 2, (int [2]){EVFILT_READ, EVFILT_WRITE}, EV_DELETE, this->_rcv, this->_snd);
+        return (void) Utils::removeSocket(this->getKqueue(), socket, 2, (int [2]){EVFILT_READ, EVFILT_WRITE}, EV_DELETE, this->_rcv, this->_snd);
 
     //IF WROTE EVERYTHING & CONNECTION: KEEP ALIVE
-	if (it->second.empty())
+    if (it->second.empty())
 	{
-		//kevent TODO REFLECHIR BONNE IMPLEMENTATION, free le UDATA ?
 		EV_SET(&socket, socket.ident, EVFILT_WRITE, EV_DELETE, 0, 0, socket.udata);
 		kevent(this->getKqueue(), &socket, 1, NULL, 0, NULL);
-
 	}
 }
 
@@ -368,13 +395,13 @@ int	Socket::run()
 			indexSocket = this->isSocket(events[i].ident);
             //SI CONNECTION LOST WITH CLIENT
 			if (events[i].flags & EV_ERROR)
-                (void) Utils::removeSocket(this->getKqueue(), &events[i], 2, (int[2]) {EVFILT_WRITE, EVFILT_READ}, EV_DELETE, this->_rcv, this->_snd);
+                (void) Utils::removeSocket(this->getKqueue(), events[i], 2, (int[2]) {EVFILT_WRITE, EVFILT_READ}, EV_DELETE, this->_rcv, this->_snd);
             //CHECK SI ACCEPT READ OR WRITE
             if (indexSocket >= 0)
                 this->addSocket(indexSocket);
-			else if (indexSocket == -1 && events[i].filter == EVFILT_READ)
+            else if (indexSocket == -1 && events[i].filter == EVFILT_READ)
 				this->readSocket(events[i]);
-			else if (indexSocket == -1 && events[i].filter == EVFILT_WRITE)
+            else if (indexSocket == -1 && events[i].filter == EVFILT_WRITE)
                 this->writeSocket(events[i]);
 		}
 	}

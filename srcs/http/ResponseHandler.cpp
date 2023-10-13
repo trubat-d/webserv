@@ -1,13 +1,8 @@
 #include "Http.hpp"
 
-std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
+std::pair<int, std::string> Http::setCGIEnv()
 {
 	std::string	tmp;
-	std::stringstream ss;
-	struct sockaddr_in	sockAddr = {};
-	socklen_t len = sizeof(sockAddr);
-	char host[NI_MAXHOST];
-	char service[NI_MAXSERV];
 
 	this->_cgiEnv.push_back(("AUTH_TYPE=" + getHeader("Authorization")));
 	this->_cgiEnv.push_back(("CONTENT_LENGTH=" + getHeader("Content-Length")));
@@ -32,20 +27,9 @@ std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
 	this->_cgiEnv.push_back(("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
 	this->_cgiEnv.push_back(("SCRIPT_NAME=" + this->_ctrlData[1])); // path relative to DOCUMENT_ROOT
 	this->_cgiEnv.push_back(("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
-	this->_cgiEnv.push_back(("REMOTE_ADDR=" + reinterpret_cast<uDada *>(socket.udata)->client_addr));
-	this->_cgiEnv.push_back(("REMOTE_HOST=" + reinterpret_cast<uDada *>(socket.udata)->client_host));
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	if (getsockname(this->_masterSocketInfo.masterSocket, reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
-        return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
-	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
-        return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
-	tmp = host;
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// TODO: DELETE WHEN OTHER DONE
-//	this->_cgiEnv.push_back(("SERVER_NAME=" + tmp)); // server hostname or IP address //TODO: get from .conf
-	ss.clear();
-	ss << this->_masterSocketInfo.masterPort;
-	ss >> tmp;
-	this->_cgiEnv.push_back(("SERVER_PORT=" + tmp)); // port on host running
+	this->_cgiEnv.push_back("REMOTE_ADDR=" + this->_masterSocketInfo.client_addr);
+	this->_cgiEnv.push_back("REMOTE_HOST=" + this->_masterSocketInfo.client_host);
+	this->_cgiEnv.push_back(("SERVER_PORT=" + this->_masterSocketInfo.masterPort)); // port on host running
 	tmp = getHeader("X-Filename");
 	if(tmp != NaV)
 		this->_cgiEnv.push_back("HTTP_X_FILENAME=" + tmp);
@@ -63,7 +47,7 @@ std::string Http::getHeader(std::string const & key) const
 
 std::pair<int, std::string>	Http::processRequest(Parser &config)
 {
-	this->_config = config.getServerConfig(this->_masterSocketInfo.client_host, std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
+	this->_config = config.getServerConfig(this->_masterSocketInfo.client_host, this->_masterSocketInfo.masterPort, this->_ctrlData[1]);
     if(this->_config.find("deny") != this->_config.end() && !this->_config.at("deny").empty())
     {
         if(std::find(this->_config.at("deny").begin(), this->_config.at("deny").end(),this->_ctrlData[0]) != this->_config.at("deny").end())

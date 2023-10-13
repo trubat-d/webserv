@@ -33,7 +33,8 @@ typedef struct uData {
     int     masterSocket;
     int     masterPort;
     bool    connection;
-    std::string   host;
+    std::string   client_host;
+    std::string   client_addr;
 } uDada;
 
 #include "Utils.hpp"

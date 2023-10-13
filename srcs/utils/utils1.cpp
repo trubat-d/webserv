@@ -142,7 +142,7 @@ std::string  Utils::fileToString(std::string & fullPath, std::pair<int, std::str
 std::string Utils::internalServerError(std::pair<int, std::string> & infos)
 {
     infos.first = 500;
-    infos.second = "HTTP/1.1 500 Internal Server Error";
+    infos.second = "HTTP/1.1 500 Internal Server Error\r\n";
     return "";
 }
 
@@ -151,22 +151,22 @@ std::string Utils::basicHTML(std::pair<int, std::string> const & infos)
     return "<!DOCTYPE html>\n<html>\n<head>\n<title>" + Utils::itos<int>(infos.first) + "</title>\n</head>\n<body>\n<p>" + infos.second.substr(9) + "</p>\n</body>\n</html>";
 }
 
-int        Utils::removeSocket(int kq, struct kevent * socket, int nfilter, int * filter, int flags, std::map<int, std::string>& receive, std::map<int, std::string>& send)
+int        Utils::removeSocket(int kq, struct kevent & socket, int nfilter, int * filter, int flags, std::map<int, std::string>& receive, std::map<int, std::string>& send)
 {
     int             tmp;
     struct kevent   sockets[nfilter];
 
     for (int i = 0; i < nfilter; i++)
-        EV_SET(&sockets[i], static_cast <int> (socket->ident), filter[i], flags, 0, 0, socket->udata);
-//    if (socket->udata != NULL)
-//    {
-//        delete reinterpret_cast<uDada *> (socket->udata);
-//        socket->udata = NULL;
-//    }
+        EV_SET(&sockets[i], static_cast <int> (socket.ident), filter[i], flags, 0, 0, socket.udata);
     tmp = kevent(kq, sockets, nfilter, NULL, 0, NULL);
-    close(static_cast <int> (socket->ident));
-    Utils::eraseMap(receive, static_cast <int> (socket->ident));
-    Utils::eraseMap(send, static_cast <int> (socket->ident));
+    if (socket.udata != NULL)
+    {
+        delete reinterpret_cast<uDada *> (socket.udata);
+        socket.udata = NULL;
+    }
+    close(static_cast <int> (socket.ident));
+    Utils::eraseMap(receive, static_cast <int> (socket.ident));
+    Utils::eraseMap(send, static_cast <int> (socket.ident));
     return tmp;
 }
 
@@ -230,4 +230,34 @@ std::string Utils::findIndex(std::string & path, t_conf_map const & conf)
         }
     }
     return "nothing";
+}
+
+void    Utils::testGetName(int fd, std::string const & context)
+{
+    struct sockaddr_in	sockAddr = {};
+    socklen_t len = sizeof(sockAddr);
+    char host[NI_MAXHOST];
+    char service[NI_MAXSERV];
+
+    getsockname(fd, reinterpret_cast <struct sockaddr *> (&sockAddr), &len);
+
+    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV,NI_NUMERICSERV);
+    std::cout << "TEST " << context << ": " << host<< " & " << service  << std::endl;
+
+    bzero(host, NI_MAXHOST);
+    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_DGRAM);
+    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
+
+    bzero(host, NI_MAXHOST);
+    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NAMEREQD);
+    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
+
+    bzero(host, NI_MAXHOST);
+    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NOFQDN);
+    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
+
+    bzero(host, NI_MAXHOST);
+    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICHOST);
+    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
+    return ;
 }

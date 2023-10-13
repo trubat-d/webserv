@@ -32,19 +32,16 @@ std::pair<int, std::string> Http::setCGIEnv(struct kevent & socket)
 	this->_cgiEnv.push_back(("DOCUMENT_ROOT=" + this->_config["root"][0])); // path where all cgi docs are
 	this->_cgiEnv.push_back(("SCRIPT_NAME=" + this->_ctrlData[1])); // path relative to DOCUMENT_ROOT
 	this->_cgiEnv.push_back(("SCRIPT_FILENAME=" + this->_config["root"][0] + this->_ctrlData[1])); // full path
-	if (getsockname(static_cast <int> (socket.ident), reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
-        return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
-	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
-        return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
-	tmp = host;
-	this->_cgiEnv.push_back(("REMOTE_ADDR=" + tmp)); // IP address client
-	this->_cgiEnv.push_back(("REMOTE_HOST=" + tmp)); // IP adress client again
+	this->_cgiEnv.push_back(("REMOTE_ADDR=" + reinterpret_cast<uDada *>(socket.udata)->client_addr));
+	this->_cgiEnv.push_back(("REMOTE_HOST=" + reinterpret_cast<uDada *>(socket.udata)->client_host));
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	if (getsockname(this->_masterSocketInfo.masterSocket, reinterpret_cast <struct sockaddr *> (&sockAddr), &len) == -1)
         return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	if (getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV))
         return std::pair<int, std::string>(500, "HTTP/1.1 500 Internal Server Error\r\n");
 	tmp = host;
-	this->_cgiEnv.push_back(("SERVER_NAME=" + tmp)); // server hostname or IP address
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// TODO: DELETE WHEN OTHER DONE
+//	this->_cgiEnv.push_back(("SERVER_NAME=" + tmp)); // server hostname or IP address //TODO: get from .conf
 	ss.clear();
 	ss << this->_masterSocketInfo.masterPort;
 	ss >> tmp;
@@ -66,7 +63,7 @@ std::string Http::getHeader(std::string const & key) const
 
 std::pair<int, std::string>	Http::processRequest(Parser &config)
 {
-	this->_config = config.getServerConfig(getHeader("Host"), std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
+	this->_config = config.getServerConfig(this->_masterSocketInfo.client_host, std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
     if(this->_config.find("deny") != this->_config.end() && !this->_config.at("deny").empty())
     {
         if(std::find(this->_config.at("deny").begin(), this->_config.at("deny").end(),this->_ctrlData[0]) != this->_config.at("deny").end())
@@ -186,6 +183,8 @@ std::string const Http::methodGetHandler()
 				this->_ctrlData[1].erase(pos + 4, _ctrlData[1].size() - pos - 4);
 			}
 		}
+		if(this->_config.find("server_name") != this->_config.end() && !this->_config.at("server_name").empty())
+			this->_cgiEnv.push_back(("SERVER_NAME=" + this->_config.at("server_name")[0]));
 		return this->cgiHandler();
 	}
 	//basic case
@@ -194,7 +193,7 @@ std::string const Http::methodGetHandler()
 	if (Utils::definePath(fullPath) == file)
     {
         if (Utils::canAccessfile(fullPath))
-            return this->fullResponse(fullPath.c_str(), Utils::fileToString(fullPath, status), status);
+            return this->fullResponse(fullPath, Utils::fileToString(fullPath, status), status);
         return generateResponse(std::pair<int, std::string> (403, "HTTP/1.1 403 Forbidden\r\n"));
     }
     //check si cest un dossier
@@ -203,7 +202,7 @@ std::string const Http::methodGetHandler()
         std::string newPath = Utils::findIndex(fullPath, this->_config);
         // si un fichier index trouve et lisible
         if (newPath != "nothing")
-            return this->fullResponse(newPath.c_str(), Utils::fileToString(newPath, status), status);
+            return this->fullResponse(newPath, Utils::fileToString(fullPath, status), status);
         //check si auto-index
         else if(this->_config.find("autoindex") != this->_config.end() && this->_config.at("autoindex")[0] == "on")
         {
@@ -233,16 +232,15 @@ std::string const Http::getMimeType(std::string path)
 	else
 		temp_path = path;
     if(temp_path.find('.') == std::string::npos)
-        return "";
+        return "text/plain";
 	std::string tmp_ext = std::string(temp_path.begin() + temp_path.find_last_of(".", temp_path.size()), temp_path.end());
 	if(Utils::mimeTypes.find(tmp_ext) != Utils::mimeTypes.end())
 	{
     	std::string const temp = Utils::mimeTypes.at(tmp_ext);
     	return temp;
 	}
-	//TODO GENERATE ERROR
 	std::cerr << "Mime type doesn't appear to be supported" << std::endl;
-	return "";
+	return "text/plain";
 }
 
 //std::string const Http::notCorrectMethodHandler()
@@ -327,31 +325,29 @@ std::string Http::cgiHandler()
 		std::string filePath = this->_config["root"][0].substr(0, this->_config["root"][0].size()-1) + this->_ctrlData[1];
 
         /////////////////////////////////////////////////TODO: CHECK JOB
-        std::string script2;
-        size_t merde;
-        std::string bouh = ".php.cgi";
-        merde = this->_ctrlData[1].find(bouh);
-        if (merde == std::string::npos)
+        std::string script;
+        size_t it;
+        std::string extension = ".php.cgi";
+        it = this->_ctrlData[1].find(extension);
+        if (it == std::string::npos)
         {
-            bouh = ".py.cgi";
-            merde = this->_ctrlData[1].find(".py.cgi");
+            extension = ".py.cgi";
+            it = this->_ctrlData[1].find(".py.cgi");
         }
-        if (merde == std::string::npos)
+        if (it == std::string::npos)
             exit (-1);
-        bouh.erase(0, 1);
+        extension.erase(0, 1);
         for (int i = 0; i < 4; i++)
-            bouh.pop_back();
-        std::vector<std::string>::iterator where = std::find(this->_config.at("cgi").begin(), this->_config.at("cgi").end(), bouh);
+            extension.pop_back();
+        std::vector<std::string>::iterator where = std::find(this->_config.at("cgi").begin(), this->_config.at("cgi").end(), extension);
         if (where != this->_config.at("cgi").end())
-            script2 = *(where+1);
+            script = *(where+1);
         else
             exit(-1);
         /////////////////////////////////////////////////
 
-		//path php cgi /System/Volumes/Data/mnt/sgoinfre/php-cgi
-        //path python: python3
-        char * args[3] = { const_cast<char*>(script2.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
-		if (execve(const_cast<char *>(script2.c_str()), args, envi) == -1)
+        char * args[3] = { const_cast<char*>(script.c_str()), const_cast<char *>(filePath.c_str()), nullptr};
+		if (execve(const_cast<char *>(script.c_str()), args, envi) == -1)
 		{
 			std::cerr << "exited on execve with filepath = " << args[0] << args[1] << std::endl;
 			exit(-1);
@@ -364,10 +360,10 @@ std::string Http::cgiHandler()
 		if (this->_body.size() > 65000)
 		{
 			std::string tmp(this->_body);
-			int merde;
-			while (!tmp.empty() && (merde = write(bodyPipe[1], tmp.c_str(), tmp.size() > 65000 ? 65000 : tmp.size())) > 0)
+			ssize_t size;
+			while (!tmp.empty() && (size = write(bodyPipe[1], tmp.c_str(), tmp.size() > 65000 ? 65000 : tmp.size())) > 0)
 			{
-				if (merde == -1)
+				if (size == -1)
 					return "502 Bad Gateway\r\n";
 				tmp.erase(0, tmp.size() > 65000 ? 65000 : tmp.size());
 			}
@@ -388,9 +384,11 @@ std::string Http::cgiHandler()
         if (Utils::timer(start))
             kill(pid, SIGINT);
     }
-	if (status)
-		return "502 Bad Gateway\r\n";
-	ssize_t size = read(fd[0], buffer, 1023);
+    if (status == 2)
+		return "508 Loop detected\r\n";
+    else if (status)
+        return "502 Bad Gateway\r\n";
+    ssize_t size = read(fd[0], buffer, 1023);
 	if (size == -1)
 		return "502 Bad Gateway\r\n";
 	while (size >= 1023)

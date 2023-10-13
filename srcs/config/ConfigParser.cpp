@@ -277,8 +277,6 @@ void Parser::join_map(t_conf_map & map1, t_conf_map & map2) const
 
 void Parser::getPorts(std::vector<std::string> &storage, t_node* last_loc)
 {
-	if(last_loc->branches.empty())
-		return ;
     if(last_loc->config.find("listen") != last_loc->config.end())
     {
         for(size_t i = 0; i < last_loc->config.at("listen").size(); i++)

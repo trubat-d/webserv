@@ -63,7 +63,10 @@ std::string Http::getHeader(std::string const & key) const
 
 std::pair<int, std::string>	Http::processRequest(Parser &config)
 {
-	this->_config = config.getServerConfig(this->_masterSocketInfo.client_host, std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
+	std::string host(getHeader("Host"));
+	if(host.find(':') != std::string::npos)
+		host.erase(host.find(':'));
+	this->_config = config.getServerConfig(host, std::to_string(this->_masterSocketInfo.masterPort), this->_ctrlData[1]);
     if(this->_config.find("deny") != this->_config.end() && !this->_config.at("deny").empty())
     {
         if(std::find(this->_config.at("deny").begin(), this->_config.at("deny").end(),this->_ctrlData[0]) != this->_config.at("deny").end())
@@ -144,7 +147,7 @@ std::string const Http::fullResponse(std::string const & path, std::string const
     t_conf_map::iterator map_it = this->_config.find("redirect");
     if (map_it != this->_config.end())
     {
-        response += "HTTP/1.1 302 FOUND";
+        response += "HTTP/1.1 302 FOUND\r\n";
         response += "Location: " + map_it->second[0] + "\r\n";
     }
     else
@@ -284,13 +287,20 @@ std::string Http::generateAutoIndex(DIR * dir, std::string path) const
     body += "<!DOCTYPE html>\n<html>\n<body>\n<h1>Auto-Index</h1>\n";
     for (std::vector<std::string>::iterator it = filesName.begin(); it != filesName.end(); it++)
     {
-        body += "<p><a href=\"http://" + this->_config.at("server_name")[0] + path + *it + "\">";
+        body += "<p><a href=\"http://" + this->_config.at("server_name")[0] + ":" + Utils::itos(this->_masterSocketInfo.masterPort) + path + *it + "\">";
         body += *it;
         body += "</a></p>\n";
     }
     body += "</body>\n</html>\n";
 
-    response += "HTTP/1.1 200 OK\r\n";
+	t_conf_map::const_iterator map_it = this->_config.find("redirect");
+	if (map_it != this->_config.end())
+	{
+		response += "HTTP/1.1 302 FOUND\r\n";
+		response += "Location: " + map_it->second[0] + "\r\n";
+	}
+	else
+		response += "HTTP/1.1 200 OK\r\n";
     response += "Date: " + Utils::getTime(0) + "\r\n";
     response += "Content-Type: text/html; charset=UTF-8\r\n";
     response += "Content-Length: " + Utils::itos(body.size()) + "\r\n";

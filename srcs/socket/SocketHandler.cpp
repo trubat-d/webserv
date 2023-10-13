@@ -208,7 +208,7 @@ void	Socket::readSocket(struct kevent & socket)
 	buffer[length] = 0;
 	std::string temp(buffer, length);
 	itRcv->second += temp;
-
+	std::cout <<  itRcv->second << std::endl;
     //SI LU ASSEZ D'INFO POUR GENERER UNE REPONSE
     int parseValue = this->processSocket(socket, itRcv->second, itSnd->second);
 	if (parseValue != keepReading)
@@ -253,7 +253,7 @@ int    Socket::processSocket(struct kevent & socket, std::string & request, std:
             //CREATE RESPONSE
             response = client.generateResponse(res);
             //SET CONNECTION CLOSE IF RESPONSE IS AN ERROR TODO , AMELIORER PAR MODIFIER UNE REF ET RENVOYER LE STATUS CODE
-            if (response.find("HTTP/1.1 200") == std::string::npos && response.find("HTTP/1.1 201") && response.find("HTTP/1.1 302") == std::string::npos)
+             if (response.find("HTTP/1.1 200") == std::string::npos && response.find("HTTP/1.1 201") && response.find("HTTP/1.1 302") == std::string::npos)
                 if (socket.udata)
                     reinterpret_cast<uDada *> (socket.udata)->connection = false;
         }

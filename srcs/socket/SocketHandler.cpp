@@ -200,15 +200,10 @@ void	Socket::readSocket(struct kevent & socket)
         itSnd->second = Utils::basicError(std::pair<int, std::string> (500, "HTTP/1.1 500 Internal Server Error\r\n"));
         return ;
     }
-	if (length < 2047)
-	{
-		std::cout << "SALOT" << std::endl;
-	}
     //CONCATENE CONTENU LU DANS MAP:RCV
 	buffer[length] = 0;
 	std::string temp(buffer, length);
 	itRcv->second += temp;
-	std::cout <<  itRcv->second << std::endl;
     //SI LU ASSEZ D'INFO POUR GENERER UNE REPONSE
     int parseValue = this->processSocket(socket, itRcv->second, itSnd->second);
 	if (parseValue != keepReading)

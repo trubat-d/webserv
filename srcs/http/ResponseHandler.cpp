@@ -371,9 +371,10 @@ std::string Http::cgiHandler()
 		}
 		exit(0);
 	}
+	close (fd[1]);
+	close(bodyPipe[0]);
 	if (!this->_body.empty())
 	{
-		std::cerr << "Write START \n" << std::endl;
 		if (this->_body.size() > 65000)
 		{
 			std::string tmp(this->_body);
@@ -390,12 +391,9 @@ std::string Http::cgiHandler()
 			if (write(bodyPipe[1], this->_body.c_str(), this->_body.size()) == -1)
 				return "502 Bad Gateway\r\n";
 		}
-		std::cerr << "Write END \n" << std::endl;
 	}
-	close (fd[1]);
-	close(bodyPipe[0]);
 	close(bodyPipe[1]);
-    const std::clock_t start = std::clock();
+	const std::clock_t start = std::clock();
     while (waitpid(pid, &status, WNOHANG) != pid)
     {
         if (Utils::timer(start))
@@ -424,7 +422,6 @@ std::string Http::cgiHandler()
 	}
 
 	close (fd[0]);
-	std::cout << "pre resp ->" << response << std::endl;
 	return processResponse(response);
 }
 
@@ -444,7 +441,6 @@ std::string Http::processResponse(std::string str)
 	}
 	status = "HTTP/1.1" + status;
 	str = status + "\r\n" + str;
-	std::cout << "post  resp ->" << str << std::endl;
 	return str;
 }
 

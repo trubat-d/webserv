@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
         $end_name = $files['name'][$i];
         echo "<p>Uploading file : $end_name </p>";
         $result = move_uploaded_file($files['tmp_name'][$i], "$upload_dir$end_name");
-        if($end_name["size"][$i] > 2097152) {
+        if($files["size"][$i] > 2097152) {
             echo "<p>The file is larger than 2MB</p>";
             header("Status: 500 Internal Server Error");
             break;

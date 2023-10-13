@@ -290,6 +290,14 @@ std::string Http::generateAutoIndex(DIR * dir, std::string path) const
     }
     body += "</body>\n</html>\n";
 
+    t_conf_map::const_iterator map_it = this->_config.find("redirect");
+    if (map_it != this->_config.end())
+    {
+        response += "HTTP/1.1 302 FOUND";
+        response += "Location: " + map_it->second[0] + "\r\n";
+    }
+    else
+        response += "HTTP/1.1 200 OK\r\n";
     response += "HTTP/1.1 200 OK\r\n";
     response += "Date: " + Utils::getTime(0) + "\r\n";
     response += "Content-Type: text/html; charset=UTF-8\r\n";

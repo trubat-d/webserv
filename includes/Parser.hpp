@@ -37,7 +37,6 @@ public:
 	bool in_config(std::map<std::string, std::vector<std::string> > &temp, std::string key, std::string value) const;
 	t_node *getLocationNode(t_node *head, const std::string &path, t_conf_map & ret) const;
 	void join_map(t_conf_map & map1, t_conf_map & map2) const;
-	void print_config(t_conf_map &maper) const;
 	t_conf_map getServerConfig(std::string const & name, std::string const & port, std::string const & path) const;
 	t_node *getServerNode(t_node *head, const std::string &name, const std::string &port, t_conf_map &ret) const;
 	void getPorts(std::vector<std::string> & storage, t_node* last_loc);

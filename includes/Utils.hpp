@@ -31,13 +31,13 @@ public:
 
     static bool                    canAccessfile(std::string const & path);
 
-    static bool                    isDir(std::string const & path);
+//    static bool                    isDir(std::string const & path);
 
     static int                      definePath(std::string const & path);
 
     static std::string              findIndex(std::string & path, t_conf_map const & conf);
 
-    static void                     testGetName(int fd, std::string const & context);
+//    static void                     testGetName(int fd, std::string const & context);
 
     template<typename T>
     static std::string itos(T value)

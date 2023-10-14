@@ -272,7 +272,7 @@ std::string Http::generateAutoIndex(DIR * dir, std::string path) const
     response += "Connection: ";
     response += getHeader("Connection") == "keep-alive" ? "keep-alive\r\n\r\n" : "close\r\n\r\n";
     response += body;
-	std::cout << response << std::endl;
+//	std::cout << response << std::endl;
     return response;
 }
 
@@ -397,7 +397,7 @@ std::string Http::processResponse(std::string str)
 		size_t endPos = str.find("\r\n", valueStart);
 		if (endPos != std::string::npos) {
 			status = str.substr(valueStart, endPos - valueStart);
-			std::cout << "Status : [" <<  status << "]" << std::endl;
+//			std::cout << "Status : [" <<  status << "]" << std::endl;
 			str.erase(startPos, endPos - startPos + 2);
 		}
 	}

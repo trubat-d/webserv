@@ -21,7 +21,7 @@ Socket::Socket(std::vector<int> port, Parser *config)
 	this->_configHead = config;
 	this->_hint.sin_family = AF_INET;
 	this->_hint.sin_addr.s_addr = htonl(INADDR_ANY);
-    std::cout << "vector port size: " << port.size() << std::endl;
+//    std::cout << "vector port size: " << port.size() << std::endl;
 	for (size_t i = 0; i < port.size(); i++)
 	{
 		this->_socket.push_back(socket(AF_INET, SOCK_STREAM, 0));
@@ -32,7 +32,7 @@ Socket::Socket(std::vector<int> port, Parser *config)
 			throw(Error::BindException());
 		if (listen(this->_socket.at(i), getWorkerConnections()))
 			throw(Error::BindException());
-        std::cout << "masterSocket " << this->_socket.at(i) << ": port= " << ntohs(this->_hint.sin_port) << std::endl;
+//        std::cout << "masterSocket " << this->_socket.at(i) << ": port= " << ntohs(this->_hint.sin_port) << std::endl;
 	}
 }
 
@@ -347,7 +347,7 @@ int	Socket::run()
 		EV_SET(&newSocket, this->_socket[j], EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
 		if (kevent(this->getKqueue(), &newSocket, 1, NULL, 0, NULL) == -1)
 			exit (1);
-        std::cout << "adding masterSocket: " << j << " to kevent" << std::endl;
+//        std::cout << "adding masterSocket: " << j << " to kevent" << std::endl;
 	}
 	while (true)
 	{

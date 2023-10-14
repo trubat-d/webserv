@@ -25,7 +25,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <time.h>
+#include <ctime>
 #include <dirent.h>
 
 
@@ -42,7 +42,6 @@ typedef struct uData {
 #include "Parser.hpp"
 #include "Socket.hpp"
 #include "Http.hpp"
-#include "CGI.hpp"
 
 enum isWhat {
     none = -1,

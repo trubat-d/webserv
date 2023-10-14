@@ -10,7 +10,7 @@ ob_start();
             }
             header("Status: 200 OK");
         ?>
-        <br><br><a href=\"/\">Return Home !</a>
+        <br><br><a href="/">Return Home !</a>
     </body>
 </html>
 <?php

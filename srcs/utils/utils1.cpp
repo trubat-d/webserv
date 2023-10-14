@@ -221,32 +221,32 @@ std::string Utils::findIndex(std::string & path, t_conf_map const & conf)
     return "nothing";
 }
 
-void    Utils::testGetName(int fd, std::string const & context)
-{
-    struct sockaddr_in	sockAddr = {};
-    socklen_t len = sizeof(sockAddr);
-    char host[NI_MAXHOST];
-    char service[NI_MAXSERV];
-
-    getsockname(fd, reinterpret_cast <struct sockaddr *> (&sockAddr), &len);
-
-    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV,NI_NUMERICSERV);
-    std::cout << "TEST " << context << ": " << host<< " & " << service  << std::endl;
-
-    bzero(host, NI_MAXHOST);
-    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_DGRAM);
-    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
-
-    bzero(host, NI_MAXHOST);
-    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NAMEREQD);
-    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
-
-    bzero(host, NI_MAXHOST);
-    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NOFQDN);
-    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
-
-    bzero(host, NI_MAXHOST);
-    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICHOST);
-    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
-    return ;
-}
+//void    Utils::testGetName(int fd, std::string const & context)
+//{
+//    struct sockaddr_in	sockAddr = {};
+//    socklen_t len = sizeof(sockAddr);
+//    char host[NI_MAXHOST];
+//    char service[NI_MAXSERV];
+//
+//    getsockname(fd, reinterpret_cast <struct sockaddr *> (&sockAddr), &len);
+//
+//    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV,NI_NUMERICSERV);
+//    std::cout << "TEST " << context << ": " << host<< " & " << service  << std::endl;
+//
+//    bzero(host, NI_MAXHOST);
+//    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_DGRAM);
+//    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
+//
+//    bzero(host, NI_MAXHOST);
+//    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NAMEREQD);
+//    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
+//
+//    bzero(host, NI_MAXHOST);
+//    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NOFQDN);
+//    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
+//
+//    bzero(host, NI_MAXHOST);
+//    getnameinfo(reinterpret_cast <struct sockaddr *> (&sockAddr), sizeof(sockAddr), host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICHOST);
+//    std::cout << "TEST: " << context << " " << host << " & " << service << std::endl;
+//    return ;
+//}

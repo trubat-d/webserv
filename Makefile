@@ -6,7 +6,6 @@ SRC			=   ./srcs/main.cpp \
 				./srcs/config/ConfigParser.cpp ./srcs/config/Parser.cpp \
 				./srcs/error/ErrorHandler.cpp \
 				./srcs/utils/utils1.cpp \
-				./srcs/cgi/CGIHandler.cpp \
 				./srcs/http/RequestHandler.cpp ./srcs/http/ResponseHandler.cpp \
 				./srcs/socket/SocketHandler.cpp
 

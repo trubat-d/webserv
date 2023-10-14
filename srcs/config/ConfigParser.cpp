@@ -246,7 +246,7 @@ void Parser::join_map(t_conf_map & map1, t_conf_map & map2) const
                     {
                         if(std::find(map1.at("deny").begin(), map1.at("deny").end(),it->second[i]) != map1.at("deny").end())
                         {
-                            std::cout << "removed :" << it->second[i] << "from deny" << std::endl;
+//                            std::cout << "removed :" << it->second[i] << "from deny" << std::endl;
                             std::remove(map1.at("deny").begin(), map1.at("deny").end(),it->second[i]);
                         }
                     }
@@ -260,7 +260,7 @@ void Parser::join_map(t_conf_map & map1, t_conf_map & map2) const
                     {
                         if(std::find(map1.at("allow").begin(), map1.at("allow").end(),it->second[i]) != map1.at("allow").end())
                         {
-                            std::cout << "removed :" << it->second[i] << "from allow" << std::endl;
+//                            std::cout << "removed :" << it->second[i] << "from allow" << std::endl;
                             std::remove(map1.at("allow").begin(), map1.at("allow").end(),it->second[i]);
                         }
                     }
@@ -296,22 +296,6 @@ void Parser::getPorts(std::vector<std::string> &storage, t_node* last_loc)
 	{
 		getPorts(storage, last_loc->branches[i]);
 	}
-}
-
-void Parser::print_config(t_conf_map & maper) const
-{
-	std::cout << " PRINTING CONFIG 1"<< std::endl;
-	for(t_conf_map::iterator it = maper.begin(); it != maper.end(); it++)
-	{
-		std::cout << "key : [" << it->first;
-		std::cout << "] Values : [";
-		for (size_t i = 0 ; i < it->second.size(); i++)
-		{
-			std::cout << it->second[i] << " ";
-		}
-		std::cout << "]" << std::endl;
-	}
-	std::cout << " END OF PRINTING CONFIG "<< std::endl;
 }
 
 bool Parser::method_error_checker(t_node &head) const

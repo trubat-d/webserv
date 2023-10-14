@@ -307,7 +307,6 @@ std::string Http::cgiHandler()
 	int bodyPipe[2];
 
 
-	std::cout << "ENTERED CGI HANDLER" << std::endl;
 	pipe(bodyPipe);
 	pipe(fd);
 	int pid = fork();

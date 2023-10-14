@@ -46,9 +46,9 @@ public:
     std::pair<int, std::string> setCGIEnv();
     std::string					generateResponse(std::pair<int, std::string> res);
 
-    std::string const methodGetHandler();
+    std::string methodGetHandler();
     std::string const notCorrectMethodHandler();
-    std::string const fullResponse(std::string const & path, std::string const & body, std::pair<int, std::string> & infos);
+    std::string const fullResponse(std::string const & path, std::string const & body, std::pair<int, std::string> const & infos);
     std::string generateAutoIndex(DIR * dir, std::string path) const;
     std::string cgiHandler();
     std::string const getMimeType(std::string path);

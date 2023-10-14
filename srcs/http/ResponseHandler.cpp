@@ -120,27 +120,24 @@ bool Http::validateBodySize(std::string &bodySize)
 	return std::atol(getHeader("Content-Length").c_str()) < std::atol(bodySize.c_str());
 }
 
-std::string const Http::fullResponse(std::string const & path, std::string const & body, std::pair<int, std::string> & infos)
+std::string const Http::fullResponse(std::string const & path, std::string const & body, std::pair<int, std::string> const & infos)
 {
     std::string         response;
     struct stat         fileInfos = {};
 
     if (path.empty())
         return Utils::basicError(infos);
-    (void) stat(path.c_str(), &fileInfos);
-    //TODO check redirection
-    t_conf_map::iterator map_it = this->_config.find("redirect");
-    if (map_it != this->_config.end())
-    {
-        response += "HTTP/1.1 302 FOUND\r\n";
-        response += "Location: " + map_it->second[0] + "\r\n";
-    }
-    else
-	    response += infos.second;
+    response += infos.second;
     response += "Date: " + Utils::getTime(0) + "\r\n";
-    response += "Content-Type: "  + getMimeType(path) + "\r\n";
-    response += "Content-Length: " + Utils::itos(body.size()) + "\r\n";
-    response += "Last-Modified: " + Utils::getTime(fileInfos.st_mtime) + "\r\n";
+    if (infos.first == 302)
+        response += "Location: " + path + "\r\n";
+    else
+    {
+        (void) stat(path.c_str(), &fileInfos);
+        response += "Content-Type: "  + getMimeType(path) + "\r\n";
+        response += "Content-Length: " + Utils::itos(body.size()) + "\r\n";
+        response += "Last-Modified: " + Utils::getTime(fileInfos.st_mtime) + "\r\n";
+    }
     response += "Server: WebserverDeSesGrandsMorts/4.20.69\r\n";
     response += "Accept-Ranges: bytes\r\n";
     response += "Connection: ";
@@ -157,32 +154,10 @@ std::string const Http::fullResponse(std::string const & path, std::string const
     return response;
 }
 
-std::string const Http::methodGetHandler()
+std::string Http::methodGetHandler()
 {
     std::pair<int, std::string> status(200, "HTTP/1.1 200 OK\r\n");
-	size_t 		pos = this->_ctrlData[1].find(".cgi");
 
-	//cgi case
-	if (pos != std::string::npos)
-	{
-		if (pos + 4 != this->_ctrlData[1].size())
-		{
-			if ((pos = this->_ctrlData[1].find('?')) != std::string::npos)
-			{
-				this->_cgiEnv.push_back(("QUERY_STRING=" + this->_ctrlData[1].substr(pos + 1, _ctrlData[1].size() - pos - 1)));
-				_ctrlData[1].erase(pos, _ctrlData[1].size() - pos);
-			}
-			if ((pos = this->_ctrlData[1].find(".cgi/")) != std::string::npos)
-			{
-				this->_cgiEnv.push_back(("PATH_INFO=" + this->_ctrlData[1].substr(pos + 4, _ctrlData[1].size() - pos - 4)));
-				this->_ctrlData[1].erase(pos + 4, _ctrlData[1].size() - pos - 4);
-			}
-		}
-		if(this->_config.find("server_name") != this->_config.end() && !this->_config.at("server_name").empty())
-			this->_cgiEnv.push_back(("SERVER_NAME=" + this->_config.at("server_name")[0]));
-		return this->cgiHandler();
-	}
-	//basic case
     std::string	fullPath = this->_config["root"][0] + this->_ctrlData[1];
     // check si cest un fichier
 	if (Utils::definePath(fullPath) == file)
@@ -210,9 +185,12 @@ std::string const Http::methodGetHandler()
         else
             return generateResponse(std::pair<int, std::string> (403, "HTTP/1.1 403 Forbidden\r\n"));
 	}
-    //ne pas acceder en tant que fichier ou dossier
+    //n'existe pas
 	else
+    {
+
         return generateResponse(std::pair<int, std::string> (404, "HTTP/1.1 404 Not Found\r\n"));
+    }
 }
 
 
@@ -433,13 +411,39 @@ std::string Http::generateResponse(std::pair<int, std::string> res)
 {
     std::string path;
 
-	if (res.first == 200)
+    // CHECK SI REDIRECTION
+    t_conf_map::iterator map_it = this->_config.find("redirect");
+    if (map_it != this->_config.end())
+        return this->fullResponse(map_it->second[0], "", std::pair<int, std::string>(302, "HTTP/1.1 302 FOUND\r\n"));
+
+    // IF OK, CHECK WHICH REQUEST
+    if (res.first == 200)
 	{
-        if (this->_ctrlData[0] == "GET")
+        size_t 		pos = this->_ctrlData[1].find(".cgi");
+        //implement rest of cgi env
+        if (pos != std::string::npos)
+        {
+            if (pos + 4 != this->_ctrlData[1].size()) {
+                if ((pos = this->_ctrlData[1].find('?')) != std::string::npos) {
+                    this->_cgiEnv.push_back(
+                            ("QUERY_STRING=" + this->_ctrlData[1].substr(pos + 1, _ctrlData[1].size() - pos - 1)));
+                    _ctrlData[1].erase(pos, _ctrlData[1].size() - pos);
+                }
+                if ((pos = this->_ctrlData[1].find(".cgi/")) != std::string::npos) {
+                    this->_cgiEnv.push_back(
+                            ("PATH_INFO=" + this->_ctrlData[1].substr(pos + 4, _ctrlData[1].size() - pos - 4)));
+                    this->_ctrlData[1].erase(pos + 4, _ctrlData[1].size() - pos - 4);
+                }
+            }
+            if (this->_config.find("server_name") != this->_config.end() && !this->_config.at("server_name").empty())
+                this->_cgiEnv.push_back(("SERVER_NAME=" + this->_config.at("server_name")[0]));
+            if (this->_ctrlData[0] == "GET" || this->_ctrlData[0] == "POST" || this->_ctrlData[0] == "DELETE")
+                return this->cgiHandler();
+        }
+        else if (this->_ctrlData[0] == "GET")
             return this->methodGetHandler();
-        else if (this->_ctrlData[0] == "POST" || this->_ctrlData[0] == "DELETE")
-            return this->cgiHandler();
     }
+    // ERROR HANDLER
     else
     {
         if(!this->_config.empty())
